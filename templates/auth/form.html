@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}{{ config.title }}{% endblock %}
+
+{% block content %}
+<main class="auth-page">
+  <section class="auth-panel" aria-labelledby="auth-form-title">
+    <div class="auth-header">
+      <p class="eyebrow">Airport Flight Management System</p>
+      <h1 id="auth-form-title">{{ config.title }}</h1>
+      <p class="muted">{{ config.description }}</p>
+    </div>
+
+    {% if error %}
+      <div class="alert" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" class="auth-form" novalidate>
+      {% if "full_name" in config.fields %}
+        <label for="full_name">Ad soyad</label>
+        <input id="full_name" name="full_name" type="text" autocomplete="name" required>
+      {% endif %}
+
+      {% if "rank" in config.fields %}
+        <label for="rank">Rütbe</label>
+        <input id="rank" name="rank" type="text" placeholder="Kaptan pilot" required>
+      {% endif %}
+
+      <label for="username">Kullanıcı adı</label>
+      <input id="username" name="username" type="text" autocomplete="username" required>
+
+      <label for="password">Şifre</label>
+      <input id="password" name="password" type="password" autocomplete="current-password" required>
+
+      <button type="submit">{{ config.button }}</button>
+    </form>
+
+    <a class="back-link" href="{{ url_for('auth.auth_home') }}">Seçim ekranına dön</a>
+  </section>
+</main>
+{% endblock %}
