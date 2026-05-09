@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+
+{% block title %}Yönetici Girişi{% endblock %}
+
+{% block content %}
+<main class="auth-page">
+  <section class="auth-panel" aria-labelledby="admin-login-title">
+    <div class="auth-header">
+      <p class="eyebrow">Airport Flight Management System</p>
+      <h1 id="admin-login-title">Yönetici Girişi</h1>
+      <p class="muted">Uçuşları, pilotları ve uçak operasyonlarını yönetmek için giriş yapın.</p>
+    </div>
+
+    {% if error %}
+      <div class="alert" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <form method="post" class="auth-form" novalidate>
+      <label for="username">Kullanıcı adı</label>
+      <input
+        id="username"
+        name="username"
+        type="text"
+        autocomplete="username"
+        placeholder="admin kullanıcı adı"
+        required
+      >
+
+      <label for="password">Şifre</label>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        autocomplete="current-password"
+        placeholder="şifre"
+        required
+      >
+
+      <button type="submit">Giriş yap</button>
+    </form>
+  </section>
+</main>
+{% endblock %}
