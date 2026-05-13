@@ -1,6 +1,12 @@
 from flask import Blueprint, flash, redirect, render_template, session, url_for
 
-from .db import list_aircrafts, list_cabin_crews, list_flights, list_routes
+from .db import (
+    get_admin_dashboard_stats,
+    list_aircrafts,
+    list_cabin_crews,
+    list_flights,
+    list_routes,
+)
 
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -16,12 +22,14 @@ def dashboard():
     cabin_crews = list_cabin_crews(session["user_id"])
     routes = list_routes(session["user_id"])
     flights = list_flights(session["user_id"])
+    stats = get_admin_dashboard_stats(session["user_id"])
     return render_template(
         "admin/dashboard.html",
         aircrafts=aircrafts,
         cabin_crews=cabin_crews,
         flights=flights,
         routes=routes,
+        stats=stats,
     )
 
 

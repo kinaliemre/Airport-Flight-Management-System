@@ -8,76 +8,33 @@
     <div>
       <p class="eyebrow">Yönetici</p>
       <h1 id="admin-dashboard-title">Hoş geldiniz, {{ session.full_name }}</h1>
-      <p class="muted">Hesabınız başarıyla açıldı. Uçuş, pilot ve uçak yönetimi modülleri bu panelden genişletilecek.</p>
+      <p class="muted">Airport operasyonlarını tek ekrandan takip edin.</p>
     </div>
 
-    <div class="summary-grid">
-      <article class="summary-card">
-        <span>Rol</span>
-        <strong>Yönetici</strong>
+    <section class="metric-grid" aria-label="Dashboard özetleri">
+      <article class="metric-card">
+        <span>Uçak</span>
+        <strong>{{ stats.aircraft_count }}</strong>
       </article>
-      <article class="summary-card">
-        <span>Kullanıcı adı</span>
-        <strong>{{ session.username }}</strong>
+      <article class="metric-card">
+        <span>Pilot</span>
+        <strong>{{ stats.pilot_count }}</strong>
       </article>
-    </div>
+      <article class="metric-card">
+        <span>Uçuş</span>
+        <strong>{{ stats.flight_count }}</strong>
+      </article>
+      <article class="metric-card">
+        <span>Rota</span>
+        <strong>{{ stats.route_count }}</strong>
+      </article>
+    </section>
 
     <div class="table-section">
-      <h2>Uçaklar</h2>
-
-      {% if aircrafts %}
-        <div class="data-list">
-          {% for aircraft in aircrafts %}
-            <article class="data-row">
-              <div>
-                <strong>{{ aircraft.name }}</strong>
-                <span>{{ aircraft.model }}</span>
-              </div>
-              <div>
-                <span>Kapasite</span>
-                <strong>{{ aircraft.capacity }}</strong>
-              </div>
-              <div>
-                <span>Koltuk</span>
-                <strong>{{ aircraft.seat_info }}</strong>
-              </div>
-            </article>
-          {% endfor %}
-        </div>
-      {% else %}
-        <p class="muted">Henüz kayıtlı uçak yok.</p>
-      {% endif %}
-    </div>
-
-    <div class="table-section">
-      <h2>Rotalar</h2>
-
-      {% if routes %}
-        <div class="data-list">
-          {% for route in routes %}
-            <article class="data-row">
-              <div>
-                <strong>{{ route.departure_city }} - {{ route.destination_city }}</strong>
-                <span>{{ route.departure_iata }} kalkış, {{ route.destination_iata }} varış</span>
-              </div>
-              <div>
-                <span>Kalkış</span>
-                <strong>{{ route.departure_airport }}</strong>
-              </div>
-              <div>
-                <span>Süre</span>
-                <strong>{{ route.estimated_duration_minutes }} dk</strong>
-              </div>
-            </article>
-          {% endfor %}
-        </div>
-      {% else %}
-        <p class="muted">Henüz kayıtlı rota yok.</p>
-      {% endif %}
-    </div>
-
-    <div class="table-section">
-      <h2>Uçuşlar</h2>
+      <div class="section-heading">
+        <h2>Uçuş Listesi</h2>
+        <span>{{ stats.flight_count }} kayıt</span>
+      </div>
 
       {% if flights %}
         <div class="data-list">
@@ -111,12 +68,75 @@
           {% endfor %}
         </div>
       {% else %}
-        <p class="muted">Henüz kayıtlı uçuş yok.</p>
+        <p class="empty-state">Henüz kayıtlı uçuş yok.</p>
       {% endif %}
     </div>
 
     <div class="table-section">
-      <h2>Kabin Ekibi</h2>
+      <div class="section-heading">
+        <h2>Rota Bilgileri</h2>
+        <span>{{ stats.route_count }} kayıt</span>
+      </div>
+
+      {% if routes %}
+        <div class="data-list">
+          {% for route in routes %}
+            <article class="data-row">
+              <div>
+                <strong>{{ route.departure_city }} - {{ route.destination_city }}</strong>
+                <span>{{ route.departure_iata }} kalkış, {{ route.destination_iata }} varış</span>
+              </div>
+              <div>
+                <span>Kalkış</span>
+                <strong>{{ route.departure_airport }}</strong>
+              </div>
+              <div>
+                <span>Süre</span>
+                <strong>{{ route.estimated_duration_minutes }} dk</strong>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty-state">Henüz kayıtlı rota yok.</p>
+      {% endif %}
+    </div>
+
+    <div class="table-section">
+      <div class="section-heading">
+        <h2>Uçaklar</h2>
+        <span>{{ stats.aircraft_count }} kayıt</span>
+      </div>
+
+      {% if aircrafts %}
+        <div class="data-list">
+          {% for aircraft in aircrafts %}
+            <article class="data-row">
+              <div>
+                <strong>{{ aircraft.name }}</strong>
+                <span>{{ aircraft.model }}</span>
+              </div>
+              <div>
+                <span>Kapasite</span>
+                <strong>{{ aircraft.capacity }}</strong>
+              </div>
+              <div>
+                <span>Koltuk</span>
+                <strong>{{ aircraft.seat_info }}</strong>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty-state">Henüz kayıtlı uçak yok.</p>
+      {% endif %}
+    </div>
+
+    <div class="table-section">
+      <div class="section-heading">
+        <h2>Kabin Ekibi</h2>
+        <span>{{ cabin_crews|length }} kayıt</span>
+      </div>
 
       {% if cabin_crews %}
         <div class="data-list">
@@ -138,7 +158,7 @@
           {% endfor %}
         </div>
       {% else %}
-        <p class="muted">Henüz kayıtlı kabin ekibi yok.</p>
+        <p class="empty-state">Henüz kayıtlı kabin ekibi yok.</p>
       {% endif %}
     </div>
 

@@ -199,7 +199,7 @@ h1 {
 }
 
 .dashboard-shell {
-  width: min(100%, 760px);
+  width: min(100%, 1040px);
   display: grid;
   gap: 24px;
   border: 1px solid var(--line);
@@ -236,14 +236,63 @@ h1 {
   font-size: 20px;
 }
 
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.metric-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 18px;
+}
+
+.metric-card span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.metric-card strong {
+  display: block;
+  color: var(--primary);
+  font-size: 34px;
+  line-height: 1;
+}
+
 .table-section {
   display: grid;
   gap: 12px;
 }
 
-.table-section h2 {
+.section-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.section-heading h2 {
   margin: 0;
   font-size: 20px;
+}
+
+.section-heading span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.empty-state {
+  margin: 0;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  padding: 16px;
 }
 
 .data-list {
@@ -307,6 +356,7 @@ h1 {
   }
 
   .auth-options,
+  .metric-grid,
   .summary-grid,
   .flight-row,
   .crew-row,
