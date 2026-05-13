@@ -76,6 +76,41 @@
       {% endif %}
     </div>
 
+    <div class="table-section">
+      <h2>Uçuşlar</h2>
+
+      {% if flights %}
+        <div class="data-list">
+          {% for flight in flights %}
+            <article class="data-row flight-row">
+              <div>
+                <strong>{{ flight.flight_number }}</strong>
+                <span>{{ flight.departure_iata }} - {{ flight.destination_iata }}</span>
+              </div>
+              <div>
+                <span>Pilot</span>
+                <strong>{{ flight.pilot_name }}</strong>
+              </div>
+              <div>
+                <span>Uçak</span>
+                <strong>{{ flight.aircraft_name }}</strong>
+              </div>
+              <div>
+                <span>Kalkış</span>
+                <strong>{{ flight.departure_time }}</strong>
+              </div>
+              <div>
+                <span>Durum</span>
+                <strong>{{ flight.status }}</strong>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted">Henüz kayıtlı uçuş yok.</p>
+      {% endif %}
+    </div>
+
     <a class="secondary-button" href="{{ url_for('auth.logout') }}">Çıkış yap</a>
   </section>
 </main>
