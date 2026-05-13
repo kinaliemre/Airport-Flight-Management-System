@@ -561,6 +561,32 @@ def list_cabin_crews_for_flight(user_id, flight_id):
     ).fetchall()
 
 
+def get_admin_dashboard_stats(user_id):
+    db = get_db()
+    return {
+        "aircraft_count": db.execute(
+            "SELECT COUNT(*) AS count FROM aircrafts WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()["count"],
+        "pilot_count": db.execute(
+            """
+            SELECT COUNT(*) AS count
+            FROM pilots
+            JOIN users ON users.id = pilots.user_id
+            WHERE users.role = 'pilot'
+            """
+        ).fetchone()["count"],
+        "flight_count": db.execute(
+            "SELECT COUNT(*) AS count FROM flights WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()["count"],
+        "route_count": db.execute(
+            "SELECT COUNT(*) AS count FROM routes WHERE user_id = ?",
+            (user_id,),
+        ).fetchone()["count"],
+    }
+
+
 def get_user_for_login(username, role):
     return get_db().execute(
         """
