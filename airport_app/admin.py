@@ -1,6 +1,6 @@
 from flask import Blueprint, flash, redirect, render_template, session, url_for
 
-from .db import list_aircrafts
+from .db import list_aircrafts, list_routes
 
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -13,7 +13,10 @@ def dashboard():
         return redirect(url_for("auth.admin_login"))
 
     aircrafts = list_aircrafts(session["user_id"])
-    return render_template("admin/dashboard.html", aircrafts=aircrafts)
+    routes = list_routes(session["user_id"])
+    return render_template(
+        "admin/dashboard.html", aircrafts=aircrafts, routes=routes
+    )
 
 
 @admin_bp.route("/old-login")
