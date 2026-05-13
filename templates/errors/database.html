@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Veritabanı Hatası{% endblock %}
+
+{% block content %}
+<main class="auth-page">
+  <section class="auth-panel" aria-labelledby="database-error-title">
+    <div class="auth-header">
+      <p class="eyebrow">Database Setup</p>
+      <h1 id="database-error-title">Veritabanı bağlantı hatası</h1>
+      <p class="muted">{{ error }}</p>
+    </div>
+
+    <a class="back-link" href="{{ url_for('auth.auth_home') }}">Ana sayfaya dön</a>
+  </section>
+</main>
+{% endblock %}

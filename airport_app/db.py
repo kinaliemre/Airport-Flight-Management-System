@@ -1,14 +1,23 @@
 import sqlite3
+from click import command, echo
 from pathlib import Path
 
 from flask import current_app, g
 from werkzeug.security import check_password_hash, generate_password_hash
 
 
+class DatabaseError(RuntimeError):
+    pass
+
+
 def get_db():
     if "db" not in g:
-        g.db = sqlite3.connect(current_app.config["DATABASE"])
-        g.db.row_factory = sqlite3.Row
+        try:
+            g.db = sqlite3.connect(current_app.config["DATABASE"])
+            g.db.row_factory = sqlite3.Row
+            g.db.execute("PRAGMA foreign_keys = ON")
+        except sqlite3.Error as error:
+            raise DatabaseError("Veritabanı bağlantısı kurulamadı.") from error
 
     return g.db
 
@@ -21,27 +30,39 @@ def close_db(_error=None):
 
 
 def init_db():
-    db = get_db()
-    db.executescript(
-        """
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            full_name TEXT NOT NULL,
-            username TEXT NOT NULL UNIQUE,
-            password_hash TEXT NOT NULL,
-            role TEXT NOT NULL CHECK (role IN ('admin', 'pilot')),
-            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-        );
+    try:
+        db = get_db()
+        db.executescript(
+            """
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                full_name TEXT NOT NULL,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL CHECK (role IN ('admin', 'pilot')),
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
 
-        CREATE TABLE IF NOT EXISTS pilots (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER NOT NULL UNIQUE,
-            rank TEXT NOT NULL,
-            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
-        );
-        """
-    )
-    db.commit()
+            CREATE TABLE IF NOT EXISTS pilots (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL UNIQUE,
+                rank TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+            );
+            """
+        )
+        db.commit()
+    except sqlite3.Error as error:
+        db = g.get("db")
+        if db is not None:
+            db.rollback()
+        raise DatabaseError("Veritabanı tabloları oluşturulamadı.") from error
+
+
+@command("init-db")
+def init_db_command():
+    init_db()
+    echo("Veritabanı tabloları hazır.")
 
 
 def init_app(app):
@@ -51,6 +72,7 @@ def init_app(app):
         init_db()
 
     app.teardown_appcontext(close_db)
+    app.cli.add_command(init_db_command)
 
 
 def create_user(full_name, username, password, role, rank=None):
