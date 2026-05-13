@@ -62,6 +62,32 @@ def init_db():
                 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
                 UNIQUE (user_id, name)
             );
+
+            CREATE TABLE IF NOT EXISTS airports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                city TEXT NOT NULL,
+                country TEXT NOT NULL,
+                iata_code TEXT NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                UNIQUE (user_id, iata_code)
+            );
+
+            CREATE TABLE IF NOT EXISTS routes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                departure_airport_id INTEGER NOT NULL,
+                destination_airport_id INTEGER NOT NULL,
+                estimated_duration_minutes INTEGER NOT NULL CHECK (estimated_duration_minutes > 0),
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (departure_airport_id) REFERENCES airports (id) ON DELETE CASCADE,
+                FOREIGN KEY (destination_airport_id) REFERENCES airports (id) ON DELETE CASCADE,
+                CHECK (departure_airport_id != destination_airport_id),
+                UNIQUE (user_id, departure_airport_id, destination_airport_id)
+            );
             """
         )
         db.commit()
@@ -186,6 +212,104 @@ def list_aircrafts(user_id):
         FROM aircrafts
         WHERE user_id = ?
         ORDER BY name
+        """,
+        (user_id,),
+    ).fetchall()
+
+
+def create_airport(user_id, name, city, country, iata_code):
+    db = get_db()
+
+    try:
+        cursor = db.execute(
+            """
+            INSERT INTO airports (user_id, name, city, country, iata_code)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (user_id, name, city, country, iata_code.upper()),
+        )
+        db.commit()
+        return cursor.lastrowid
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return None
+
+
+def get_airport_by_id(airport_id, user_id):
+    return get_db().execute(
+        """
+        SELECT id, user_id, name, city, country, iata_code, created_at
+        FROM airports
+        WHERE id = ? AND user_id = ?
+        """,
+        (airport_id, user_id),
+    ).fetchone()
+
+
+def list_airports(user_id):
+    return get_db().execute(
+        """
+        SELECT id, name, city, country, iata_code, created_at
+        FROM airports
+        WHERE user_id = ?
+        ORDER BY city, name
+        """,
+        (user_id,),
+    ).fetchall()
+
+
+def create_route(
+    user_id, departure_airport_id, destination_airport_id, estimated_duration_minutes
+):
+    db = get_db()
+
+    departure = get_airport_by_id(departure_airport_id, user_id)
+    destination = get_airport_by_id(destination_airport_id, user_id)
+    if departure is None or destination is None:
+        return None
+
+    try:
+        cursor = db.execute(
+            """
+            INSERT INTO routes (
+                user_id,
+                departure_airport_id,
+                destination_airport_id,
+                estimated_duration_minutes
+            )
+            VALUES (?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                departure_airport_id,
+                destination_airport_id,
+                estimated_duration_minutes,
+            ),
+        )
+        db.commit()
+        return cursor.lastrowid
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return None
+
+
+def list_routes(user_id):
+    return get_db().execute(
+        """
+        SELECT
+            routes.id,
+            routes.estimated_duration_minutes,
+            departure.name AS departure_airport,
+            departure.city AS departure_city,
+            departure.iata_code AS departure_iata,
+            destination.name AS destination_airport,
+            destination.city AS destination_city,
+            destination.iata_code AS destination_iata
+        FROM routes
+        JOIN airports AS departure ON departure.id = routes.departure_airport_id
+        JOIN airports AS destination ON destination.id = routes.destination_airport_id
+        WHERE routes.user_id = ?
+        ORDER BY departure.city, destination.city
         """,
         (user_id,),
     ).fetchall()

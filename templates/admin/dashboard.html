@@ -49,6 +49,33 @@
       {% endif %}
     </div>
 
+    <div class="table-section">
+      <h2>Rotalar</h2>
+
+      {% if routes %}
+        <div class="data-list">
+          {% for route in routes %}
+            <article class="data-row">
+              <div>
+                <strong>{{ route.departure_city }} - {{ route.destination_city }}</strong>
+                <span>{{ route.departure_iata }} kalkış, {{ route.destination_iata }} varış</span>
+              </div>
+              <div>
+                <span>Kalkış</span>
+                <strong>{{ route.departure_airport }}</strong>
+              </div>
+              <div>
+                <span>Süre</span>
+                <strong>{{ route.estimated_duration_minutes }} dk</strong>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted">Henüz kayıtlı rota yok.</p>
+      {% endif %}
+    </div>
+
     <a class="secondary-button" href="{{ url_for('auth.logout') }}">Çıkış yap</a>
   </section>
 </main>
