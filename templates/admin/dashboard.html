@@ -103,11 +103,42 @@
                 <span>Durum</span>
                 <strong>{{ flight.status }}</strong>
               </div>
+              <div>
+                <span>Kabin ekibi</span>
+                <strong>{{ flight.cabin_crew_names or "Atanmadı" }}</strong>
+              </div>
             </article>
           {% endfor %}
         </div>
       {% else %}
         <p class="muted">Henüz kayıtlı uçuş yok.</p>
+      {% endif %}
+    </div>
+
+    <div class="table-section">
+      <h2>Kabin Ekibi</h2>
+
+      {% if cabin_crews %}
+        <div class="data-list">
+          {% for crew in cabin_crews %}
+            <article class="data-row crew-row">
+              <div>
+                <strong>{{ crew.full_name }}</strong>
+                <span>{{ crew.duty }}</span>
+              </div>
+              <div>
+                <span>Telefon</span>
+                <strong>{{ crew.phone or "-" }}</strong>
+              </div>
+              <div>
+                <span>Durum</span>
+                <strong>{{ "Aktif" if crew.is_active else "Pasif" }}</strong>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted">Henüz kayıtlı kabin ekibi yok.</p>
       {% endif %}
     </div>
 

@@ -263,7 +263,11 @@ h1 {
 }
 
 .flight-row {
-  grid-template-columns: 1fr 1fr 0.9fr 1fr 0.7fr;
+  grid-template-columns: 0.9fr 1fr 0.8fr 1fr 0.7fr 1.2fr;
+}
+
+.crew-row {
+  grid-template-columns: 1.4fr 1fr 0.6fr;
 }
 
 .data-row span {
@@ -305,6 +309,7 @@ h1 {
   .auth-options,
   .summary-grid,
   .flight-row,
+  .crew-row,
   .data-row {
     grid-template-columns: 1fr;
   }
