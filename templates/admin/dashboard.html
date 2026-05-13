@@ -22,6 +22,33 @@
       </article>
     </div>
 
+    <div class="table-section">
+      <h2>Uçaklar</h2>
+
+      {% if aircrafts %}
+        <div class="data-list">
+          {% for aircraft in aircrafts %}
+            <article class="data-row">
+              <div>
+                <strong>{{ aircraft.name }}</strong>
+                <span>{{ aircraft.model }}</span>
+              </div>
+              <div>
+                <span>Kapasite</span>
+                <strong>{{ aircraft.capacity }}</strong>
+              </div>
+              <div>
+                <span>Koltuk</span>
+                <strong>{{ aircraft.seat_info }}</strong>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="muted">Henüz kayıtlı uçak yok.</p>
+      {% endif %}
+    </div>
+
     <a class="secondary-button" href="{{ url_for('auth.logout') }}">Çıkış yap</a>
   </section>
 </main>
