@@ -236,6 +236,44 @@ h1 {
   font-size: 20px;
 }
 
+.table-section {
+  display: grid;
+  gap: 12px;
+}
+
+.table-section h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.data-list {
+  display: grid;
+  gap: 10px;
+}
+
+.data-row {
+  display: grid;
+  grid-template-columns: 1.4fr 0.7fr 0.9fr;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 14px;
+}
+
+.data-row span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.data-row strong {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
 .secondary-button {
   display: inline-flex;
   justify-self: start;
@@ -261,7 +299,8 @@ h1 {
   }
 
   .auth-options,
-  .summary-grid {
+  .summary-grid,
+  .data-row {
     grid-template-columns: 1fr;
   }
 

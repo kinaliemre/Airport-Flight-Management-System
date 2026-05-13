@@ -49,6 +49,19 @@ def init_db():
                 rank TEXT NOT NULL,
                 FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
             );
+
+            CREATE TABLE IF NOT EXISTS aircrafts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                name TEXT NOT NULL,
+                model TEXT NOT NULL,
+                capacity INTEGER NOT NULL CHECK (capacity > 0),
+                seat_info TEXT NOT NULL,
+                is_active INTEGER NOT NULL DEFAULT 1,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                UNIQUE (user_id, name)
+            );
             """
         )
         db.commit()
@@ -135,6 +148,47 @@ def get_pilot_by_user_id(user_id):
         """,
         (user_id,),
     ).fetchone()
+
+
+def create_aircraft(user_id, name, model, capacity, seat_info):
+    db = get_db()
+
+    try:
+        cursor = db.execute(
+            """
+            INSERT INTO aircrafts (user_id, name, model, capacity, seat_info)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (user_id, name, model, capacity, seat_info),
+        )
+        db.commit()
+        return cursor.lastrowid
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return None
+
+
+def get_aircraft_by_id(aircraft_id, user_id):
+    return get_db().execute(
+        """
+        SELECT id, user_id, name, model, capacity, seat_info, is_active, created_at
+        FROM aircrafts
+        WHERE id = ? AND user_id = ?
+        """,
+        (aircraft_id, user_id),
+    ).fetchone()
+
+
+def list_aircrafts(user_id):
+    return get_db().execute(
+        """
+        SELECT id, name, model, capacity, seat_info, is_active, created_at
+        FROM aircrafts
+        WHERE user_id = ?
+        ORDER BY name
+        """,
+        (user_id,),
+    ).fetchall()
 
 
 def get_user_for_login(username, role):
