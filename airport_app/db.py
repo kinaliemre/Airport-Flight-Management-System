@@ -100,6 +100,43 @@ def create_user(full_name, username, password, role, rank=None):
         return None
 
 
+def create_admin(full_name, username, password):
+    return create_user(full_name, username, password, role="admin")
+
+
+def create_pilot(full_name, username, password, rank):
+    return create_user(full_name, username, password, role="pilot", rank=rank)
+
+
+def get_user_by_id(user_id):
+    return get_db().execute(
+        """
+        SELECT id, full_name, username, role, created_at
+        FROM users
+        WHERE id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+
+
+def get_pilot_by_user_id(user_id):
+    return get_db().execute(
+        """
+        SELECT
+            pilots.id AS pilot_id,
+            pilots.rank,
+            users.id AS user_id,
+            users.full_name,
+            users.username,
+            users.created_at
+        FROM pilots
+        JOIN users ON users.id = pilots.user_id
+        WHERE pilots.user_id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+
+
 def get_user_for_login(username, role):
     return get_db().execute(
         """

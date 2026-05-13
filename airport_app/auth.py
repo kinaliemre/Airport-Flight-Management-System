@@ -1,6 +1,12 @@
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
-from .db import create_user, get_user_for_login, verify_user_password
+from .db import (
+    create_admin,
+    create_pilot,
+    get_pilot_by_user_id,
+    get_user_for_login,
+    verify_user_password,
+)
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -83,13 +89,19 @@ def render_auth_form(form_type):
         if missing_fields:
             error = "Lütfen tüm alanları doldurun."
         elif config["mode"] == "register":
-            user_id = create_user(
-                full_name=form_data["full_name"],
-                username=form_data["username"],
-                password=form_data["password"],
-                role=config["role"],
-                rank=form_data.get("rank"),
-            )
+            if config["role"] == "pilot":
+                user_id = create_pilot(
+                    full_name=form_data["full_name"],
+                    username=form_data["username"],
+                    password=form_data["password"],
+                    rank=form_data["rank"],
+                )
+            else:
+                user_id = create_admin(
+                    full_name=form_data["full_name"],
+                    username=form_data["username"],
+                    password=form_data["password"],
+                )
 
             if user_id is None:
                 error = "Bu kullanıcı adı zaten kullanılıyor."
@@ -124,8 +136,8 @@ def pilot_dashboard():
         flash("Pilot paneline erişmek için giriş yapmalısınız.", "error")
         return redirect(url_for("auth.pilot_login"))
 
-    user = get_user_for_login(session["username"], "pilot")
-    return render_template("pilot/dashboard.html", user=user)
+    pilot = get_pilot_by_user_id(session["user_id"])
+    return render_template("pilot/dashboard.html", user=pilot)
 
 
 @auth_bp.route("/logout")
