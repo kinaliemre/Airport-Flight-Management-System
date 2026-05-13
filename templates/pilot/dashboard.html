@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Pilot Paneli{% endblock %}
+
+{% block content %}
+<main class="dashboard-page">
+  <section class="dashboard-shell" aria-labelledby="pilot-dashboard-title">
+    <div>
+      <p class="eyebrow">Pilot</p>
+      <h1 id="pilot-dashboard-title">Hoş geldiniz, {{ user.full_name }}</h1>
+      <p class="muted">Hesabınız başarıyla açıldı. Atanan uçuşlarınız bu panelde listelenecek.</p>
+    </div>
+
+    <div class="summary-grid">
+      <article class="summary-card">
+        <span>Rütbe</span>
+        <strong>{{ user.rank }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Kullanıcı adı</span>
+        <strong>{{ user.username }}</strong>
+      </article>
+    </div>
+
+    <a class="secondary-button" href="{{ url_for('auth.logout') }}">Çıkış yap</a>
+  </section>
+</main>
+{% endblock %}

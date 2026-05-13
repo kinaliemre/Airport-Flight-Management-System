@@ -18,19 +18,25 @@
     <form method="post" class="auth-form" novalidate>
       {% if "full_name" in config.fields %}
         <label for="full_name">Ad soyad</label>
-        <input id="full_name" name="full_name" type="text" autocomplete="name" required>
+        <input id="full_name" name="full_name" type="text" autocomplete="name" value="{{ form_data.get('full_name', '') }}" required>
       {% endif %}
 
       {% if "rank" in config.fields %}
         <label for="rank">Rütbe</label>
-        <input id="rank" name="rank" type="text" placeholder="Kaptan pilot" required>
+        <input id="rank" name="rank" type="text" placeholder="Kaptan pilot" value="{{ form_data.get('rank', '') }}" required>
       {% endif %}
 
       <label for="username">Kullanıcı adı</label>
-      <input id="username" name="username" type="text" autocomplete="username" required>
+      <input id="username" name="username" type="text" autocomplete="username" value="{{ form_data.get('username', '') }}" required>
 
       <label for="password">Şifre</label>
-      <input id="password" name="password" type="password" autocomplete="current-password" required>
+      <input
+        id="password"
+        name="password"
+        type="password"
+        autocomplete="{{ 'new-password' if config.mode == 'register' else 'current-password' }}"
+        required
+      >
 
       <button type="submit">{{ config.button }}</button>
     </form>

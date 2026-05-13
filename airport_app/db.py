@@ -1,0 +1,94 @@
+import sqlite3
+from pathlib import Path
+
+from flask import current_app, g
+from werkzeug.security import check_password_hash, generate_password_hash
+
+
+def get_db():
+    if "db" not in g:
+        g.db = sqlite3.connect(current_app.config["DATABASE"])
+        g.db.row_factory = sqlite3.Row
+
+    return g.db
+
+
+def close_db(_error=None):
+    db = g.pop("db", None)
+
+    if db is not None:
+        db.close()
+
+
+def init_db():
+    db = get_db()
+    db.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            full_name TEXT NOT NULL,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            role TEXT NOT NULL CHECK (role IN ('admin', 'pilot')),
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS pilots (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL UNIQUE,
+            rank TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+        );
+        """
+    )
+    db.commit()
+
+
+def init_app(app):
+    Path(app.instance_path).mkdir(parents=True, exist_ok=True)
+
+    with app.app_context():
+        init_db()
+
+    app.teardown_appcontext(close_db)
+
+
+def create_user(full_name, username, password, role, rank=None):
+    db = get_db()
+
+    try:
+        cursor = db.execute(
+            """
+            INSERT INTO users (full_name, username, password_hash, role)
+            VALUES (?, ?, ?, ?)
+            """,
+            (full_name, username, generate_password_hash(password), role),
+        )
+
+        if role == "pilot":
+            db.execute(
+                "INSERT INTO pilots (user_id, rank) VALUES (?, ?)",
+                (cursor.lastrowid, rank),
+            )
+
+        db.commit()
+        return cursor.lastrowid
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return None
+
+
+def get_user_for_login(username, role):
+    return get_db().execute(
+        """
+        SELECT users.*, pilots.rank
+        FROM users
+        LEFT JOIN pilots ON pilots.user_id = users.id
+        WHERE users.username = ? AND users.role = ?
+        """,
+        (username, role),
+    ).fetchone()
+
+
+def verify_user_password(user, password):
+    return user is not None and check_password_hash(user["password_hash"], password)

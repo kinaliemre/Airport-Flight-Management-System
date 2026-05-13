@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}Yönetici Paneli{% endblock %}
+
+{% block content %}
+<main class="dashboard-page">
+  <section class="dashboard-shell" aria-labelledby="admin-dashboard-title">
+    <div>
+      <p class="eyebrow">Yönetici</p>
+      <h1 id="admin-dashboard-title">Hoş geldiniz, {{ session.full_name }}</h1>
+      <p class="muted">Hesabınız başarıyla açıldı. Uçuş, pilot ve uçak yönetimi modülleri bu panelden genişletilecek.</p>
+    </div>
+
+    <div class="summary-grid">
+      <article class="summary-card">
+        <span>Rol</span>
+        <strong>Yönetici</strong>
+      </article>
+      <article class="summary-card">
+        <span>Kullanıcı adı</span>
+        <strong>{{ session.username }}</strong>
+      </article>
+    </div>
+
+    <a class="secondary-button" href="{{ url_for('auth.logout') }}">Çıkış yap</a>
+  </section>
+</main>
+{% endblock %}
