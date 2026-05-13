@@ -88,6 +88,26 @@ def init_db():
                 CHECK (departure_airport_id != destination_airport_id),
                 UNIQUE (user_id, departure_airport_id, destination_airport_id)
             );
+
+            CREATE TABLE IF NOT EXISTS flights (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                flight_number TEXT NOT NULL,
+                route_id INTEGER NOT NULL,
+                pilot_id INTEGER NOT NULL,
+                aircraft_id INTEGER NOT NULL,
+                departure_time TEXT NOT NULL,
+                arrival_time TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'scheduled'
+                    CHECK (status IN ('scheduled', 'delayed', 'cancelled', 'completed')),
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (route_id) REFERENCES routes (id) ON DELETE CASCADE,
+                FOREIGN KEY (pilot_id) REFERENCES pilots (id) ON DELETE CASCADE,
+                FOREIGN KEY (aircraft_id) REFERENCES aircrafts (id) ON DELETE CASCADE,
+                CHECK (departure_time < arrival_time),
+                UNIQUE (user_id, flight_number)
+            );
             """
         )
         db.commit()
@@ -173,6 +193,23 @@ def get_pilot_by_user_id(user_id):
         WHERE pilots.user_id = ?
         """,
         (user_id,),
+    ).fetchone()
+
+
+def get_pilot_by_id(pilot_id):
+    return get_db().execute(
+        """
+        SELECT
+            pilots.id AS pilot_id,
+            pilots.rank,
+            users.id AS user_id,
+            users.full_name,
+            users.username
+        FROM pilots
+        JOIN users ON users.id = pilots.user_id
+        WHERE pilots.id = ?
+        """,
+        (pilot_id,),
     ).fetchone()
 
 
@@ -310,6 +347,100 @@ def list_routes(user_id):
         JOIN airports AS destination ON destination.id = routes.destination_airport_id
         WHERE routes.user_id = ?
         ORDER BY departure.city, destination.city
+        """,
+        (user_id,),
+    ).fetchall()
+
+
+def get_route_by_id(route_id, user_id):
+    return get_db().execute(
+        """
+        SELECT id, user_id, departure_airport_id, destination_airport_id,
+               estimated_duration_minutes, created_at
+        FROM routes
+        WHERE id = ? AND user_id = ?
+        """,
+        (route_id, user_id),
+    ).fetchone()
+
+
+def create_flight(
+    user_id,
+    flight_number,
+    route_id,
+    pilot_id,
+    aircraft_id,
+    departure_time,
+    arrival_time,
+    status="scheduled",
+):
+    db = get_db()
+
+    route = get_route_by_id(route_id, user_id)
+    aircraft = get_aircraft_by_id(aircraft_id, user_id)
+    pilot = get_pilot_by_id(pilot_id)
+    if route is None or aircraft is None or pilot is None:
+        return None
+
+    try:
+        cursor = db.execute(
+            """
+            INSERT INTO flights (
+                user_id,
+                flight_number,
+                route_id,
+                pilot_id,
+                aircraft_id,
+                departure_time,
+                arrival_time,
+                status
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                user_id,
+                flight_number.upper(),
+                route_id,
+                pilot_id,
+                aircraft_id,
+                departure_time,
+                arrival_time,
+                status,
+            ),
+        )
+        db.commit()
+        return cursor.lastrowid
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return None
+
+
+def list_flights(user_id):
+    return get_db().execute(
+        """
+        SELECT
+            flights.id,
+            flights.flight_number,
+            flights.departure_time,
+            flights.arrival_time,
+            flights.status,
+            pilot_user.full_name AS pilot_name,
+            pilots.rank AS pilot_rank,
+            aircrafts.name AS aircraft_name,
+            aircrafts.model AS aircraft_model,
+            departure.city AS departure_city,
+            departure.iata_code AS departure_iata,
+            destination.city AS destination_city,
+            destination.iata_code AS destination_iata
+        FROM flights
+        JOIN pilots ON pilots.id = flights.pilot_id
+        JOIN users AS pilot_user ON pilot_user.id = pilots.user_id
+        JOIN aircrafts ON aircrafts.id = flights.aircraft_id
+        JOIN routes ON routes.id = flights.route_id
+        JOIN airports AS departure ON departure.id = routes.departure_airport_id
+        JOIN airports AS destination ON destination.id = routes.destination_airport_id
+        WHERE flights.user_id = ?
+        ORDER BY flights.departure_time
         """,
         (user_id,),
     ).fetchall()
