@@ -1,7 +1,9 @@
 from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from .db import (
+    cancel_flight,
     create_aircraft,
+    create_flight,
     create_pilot,
     get_admin_dashboard_stats,
     list_aircrafts,
@@ -9,11 +11,14 @@ from .db import (
     list_flights,
     list_pilots,
     list_routes,
+    update_flight,
     update_pilot,
 )
 
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
+
+FLIGHT_STATUSES = {"scheduled", "delayed", "cancelled", "completed"}
 
 
 def require_admin():
@@ -141,6 +146,90 @@ def edit_pilot(pilot_id):
         flash("Pilot bilgileri güncellendi.", "success")
     else:
         flash("Pilot bulunamadı veya kullanıcı adı zaten kayıtlı.", "error")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+def read_flight_form():
+    form_data = {
+        "flight_number": request.form.get("flight_number", "").strip(),
+        "route_id": request.form.get("route_id", "").strip(),
+        "pilot_id": request.form.get("pilot_id", "").strip(),
+        "aircraft_id": request.form.get("aircraft_id", "").strip(),
+        "departure_time": request.form.get("departure_time", "").strip(),
+        "arrival_time": request.form.get("arrival_time", "").strip(),
+        "status": request.form.get("status", "scheduled").strip(),
+    }
+
+    if not all(form_data.values()):
+        return None, "Uçuş bilgileri için tüm alanları doldurun."
+
+    try:
+        form_data["route_id"] = int(form_data["route_id"])
+        form_data["pilot_id"] = int(form_data["pilot_id"])
+        form_data["aircraft_id"] = int(form_data["aircraft_id"])
+    except ValueError:
+        return None, "Uçuş için rota, pilot ve uçak seçimi geçersiz."
+
+    if form_data["departure_time"] >= form_data["arrival_time"]:
+        return None, "Varış zamanı kalkış zamanından sonra olmalıdır."
+
+    if form_data["status"] not in FLIGHT_STATUSES:
+        return None, "Uçuş durumu geçersiz."
+
+    return form_data, None
+
+
+@admin_bp.route("/flights", methods=["POST"])
+def add_flight():
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    form_data, error = read_flight_form()
+    if error is not None:
+        flash(error, "error")
+        return redirect(url_for("admin.dashboard"))
+
+    flight_id = create_flight(user_id=session["user_id"], **form_data)
+
+    if flight_id is None:
+        flash("Uçuş oluşturulamadı. Uçuş numarası veya seçimler geçersiz olabilir.", "error")
+    else:
+        flash("Uçuş başarıyla oluşturuldu.", "success")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/flights/<int:flight_id>", methods=["POST"])
+def edit_flight(flight_id):
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    form_data, error = read_flight_form()
+    if error is not None:
+        flash(error, "error")
+        return redirect(url_for("admin.dashboard"))
+
+    if update_flight(user_id=session["user_id"], flight_id=flight_id, **form_data):
+        flash("Uçuş bilgileri güncellendi.", "success")
+    else:
+        flash("Uçuş güncellenemedi. Uçuş numarası veya seçimler geçersiz olabilir.", "error")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/flights/<int:flight_id>/cancel", methods=["POST"])
+def cancel_flight_route(flight_id):
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    if cancel_flight(session["user_id"], flight_id):
+        flash("Uçuş iptal edildi.", "success")
+    else:
+        flash("Uçuş iptal edilemedi.", "error")
 
     return redirect(url_for("admin.dashboard"))
 

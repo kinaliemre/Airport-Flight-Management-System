@@ -488,6 +488,9 @@ def list_flights(user_id):
         SELECT
             flights.id,
             flights.flight_number,
+            flights.route_id,
+            flights.pilot_id,
+            flights.aircraft_id,
             flights.departure_time,
             flights.arrival_time,
             flights.status,
@@ -568,6 +571,79 @@ def get_flight_by_id(flight_id, user_id):
         """,
         (flight_id, user_id),
     ).fetchone()
+
+
+def update_flight(
+    user_id,
+    flight_id,
+    flight_number,
+    route_id,
+    pilot_id,
+    aircraft_id,
+    departure_time,
+    arrival_time,
+    status,
+):
+    db = get_db()
+    flight = get_flight_by_id(flight_id, user_id)
+    route = get_route_by_id(route_id, user_id)
+    aircraft = get_aircraft_by_id(aircraft_id, user_id)
+    pilot = get_pilot_by_id(pilot_id)
+    if flight is None or route is None or aircraft is None or pilot is None:
+        return False
+
+    try:
+        db.execute(
+            """
+            UPDATE flights
+            SET flight_number = ?,
+                route_id = ?,
+                pilot_id = ?,
+                aircraft_id = ?,
+                departure_time = ?,
+                arrival_time = ?,
+                status = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (
+                flight_number.upper(),
+                route_id,
+                pilot_id,
+                aircraft_id,
+                departure_time,
+                arrival_time,
+                status,
+                flight_id,
+                user_id,
+            ),
+        )
+        db.commit()
+        return True
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return False
+
+
+def cancel_flight(user_id, flight_id):
+    db = get_db()
+    flight = get_flight_by_id(flight_id, user_id)
+    if flight is None:
+        return False
+
+    try:
+        db.execute(
+            """
+            UPDATE flights
+            SET status = 'cancelled'
+            WHERE id = ? AND user_id = ?
+            """,
+            (flight_id, user_id),
+        )
+        db.commit()
+        return True
+    except sqlite3.Error:
+        db.rollback()
+        return False
 
 
 def assign_cabin_crew_to_flight(user_id, flight_id, cabin_crew_id):
