@@ -32,6 +32,32 @@
 
     <div class="table-section">
       <div class="section-heading">
+        <h2>Uçak Ekle</h2>
+      </div>
+
+      <form class="management-form" method="post" action="{{ url_for('admin.add_aircraft') }}">
+        <label>
+          Uçak adı
+          <input name="name" type="text" placeholder="TC-JFA" required>
+        </label>
+        <label>
+          Model
+          <input name="model" type="text" placeholder="Airbus A320" required>
+        </label>
+        <label>
+          Kapasite
+          <input name="capacity" type="number" min="1" placeholder="180" required>
+        </label>
+        <label>
+          Koltuk bilgisi
+          <input name="seat_info" type="text" placeholder="30 sıra, 6 koltuk" required>
+        </label>
+        <button type="submit">Uçak ekle</button>
+      </form>
+    </div>
+
+    <div class="table-section">
+      <div class="section-heading">
         <h2>Uçuş Listesi</h2>
         <span>{{ stats.flight_count }} kayıt</span>
       </div>
@@ -111,7 +137,7 @@
       {% if aircrafts %}
         <div class="data-list">
           {% for aircraft in aircrafts %}
-            <article class="data-row">
+            <article class="data-row aircraft-row">
               <div>
                 <strong>{{ aircraft.name }}</strong>
                 <span>{{ aircraft.model }}</span>
@@ -121,7 +147,11 @@
                 <strong>{{ aircraft.capacity }}</strong>
               </div>
               <div>
-                <span>Koltuk</span>
+                <span>Boş koltuk</span>
+                <strong>{{ aircraft.capacity }}</strong>
+              </div>
+              <div>
+                <span>Koltuk düzeni</span>
                 <strong>{{ aircraft.seat_info }}</strong>
               </div>
             </article>
