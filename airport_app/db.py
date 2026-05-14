@@ -599,6 +599,40 @@ def list_flights(user_id):
     ).fetchall()
 
 
+def list_flights_for_pilot(pilot_id):
+    return get_db().execute(
+        """
+        SELECT
+            flights.id,
+            flights.flight_number,
+            flights.departure_time,
+            flights.arrival_time,
+            flights.status,
+            aircrafts.name AS aircraft_name,
+            aircrafts.model AS aircraft_model,
+            aircrafts.capacity AS aircraft_capacity,
+            aircrafts.seat_info AS aircraft_seat_info,
+            departure.name AS departure_airport,
+            departure.city AS departure_city,
+            departure.country AS departure_country,
+            departure.iata_code AS departure_iata,
+            destination.name AS destination_airport,
+            destination.city AS destination_city,
+            destination.country AS destination_country,
+            destination.iata_code AS destination_iata,
+            routes.estimated_duration_minutes
+        FROM flights
+        JOIN aircrafts ON aircrafts.id = flights.aircraft_id
+        JOIN routes ON routes.id = flights.route_id
+        JOIN airports AS departure ON departure.id = routes.departure_airport_id
+        JOIN airports AS destination ON destination.id = routes.destination_airport_id
+        WHERE flights.pilot_id = ?
+        ORDER BY flights.departure_time
+        """,
+        (pilot_id,),
+    ).fetchall()
+
+
 def create_cabin_crew(user_id, full_name, duty, phone=None):
     db = get_db()
 

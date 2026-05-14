@@ -407,6 +407,11 @@ h1 {
   grid-template-columns: 0.7fr 0.9fr 1.1fr 1.1fr 1fr 1fr 0.8fr auto;
 }
 
+.pilot-flight-row {
+  grid-template-columns: 0.7fr 1.4fr 1.4fr 1.1fr 0.9fr 0.9fr;
+  align-items: start;
+}
+
 .data-row span {
   display: block;
   color: var(--muted);
@@ -451,6 +456,7 @@ h1 {
   .aircraft-row,
   .pilot-row,
   .flight-edit-row,
+  .pilot-flight-row,
   .flight-row,
   .crew-row,
   .data-row {
