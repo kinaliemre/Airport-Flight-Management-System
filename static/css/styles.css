@@ -135,6 +135,14 @@ h1 {
   grid-template-columns: 0.8fr 1fr 1.2fr 1.2fr 1fr 1fr 0.9fr auto;
 }
 
+.airport-form {
+  grid-template-columns: minmax(220px, 1fr) auto;
+}
+
+.route-form {
+  grid-template-columns: 1.2fr 1.2fr 0.7fr auto;
+}
+
 .auth-form label {
   margin-top: 8px;
   font-size: 14px;
@@ -150,7 +158,10 @@ h1 {
 }
 
 .pilot-row label,
-.flight-edit-row label {
+.flight-edit-row label,
+.airport-row label,
+.route-row label,
+.aircraft-management-row label {
   display: grid;
   gap: 6px;
   color: var(--muted);
@@ -162,6 +173,10 @@ h1 {
 .management-form input,
 .management-form select,
 .pilot-row input,
+.airport-row input,
+.route-row input,
+.route-row select,
+.aircraft-management-row input,
 .flight-edit-row input,
 .flight-edit-row select,
 .inline-request-form textarea {
@@ -178,6 +193,10 @@ h1 {
 .management-form input:focus,
 .management-form select:focus,
 .pilot-row input:focus,
+.airport-row input:focus,
+.route-row input:focus,
+.route-row select:focus,
+.aircraft-management-row input:focus,
 .flight-edit-row input:focus,
 .flight-edit-row select:focus,
 .inline-request-form textarea:focus {
@@ -188,6 +207,9 @@ h1 {
 .auth-form button,
 .management-form button,
 .pilot-row button,
+.airport-row button,
+.route-row button,
+.aircraft-management-row button,
 .flight-edit-row button,
 .cancellation-request-row button {
   width: 100%;
@@ -266,6 +288,9 @@ h1 {
 .auth-form button:hover,
 .management-form button:hover,
 .pilot-row button:hover,
+.airport-row button:hover,
+.route-row button:hover,
+.aircraft-management-row button:hover,
 .flight-edit-row button:hover,
 .cancellation-request-row button:hover {
   background: var(--primary-hover);
@@ -440,8 +465,20 @@ h1 {
   grid-template-columns: 1.2fr 1fr 0.9fr auto;
 }
 
+.airport-row {
+  grid-template-columns: 1.4fr 1fr 1fr 0.5fr auto;
+}
+
+.route-row {
+  grid-template-columns: 1.2fr 1.2fr 0.7fr auto;
+}
+
 .flight-edit-row {
   grid-template-columns: 0.7fr 0.9fr 1.1fr 1.1fr 1fr 1fr 0.8fr auto;
+}
+
+.aircraft-management-row {
+  grid-template-columns: 1fr 1fr 0.7fr 1fr 0.7fr auto;
 }
 
 .pilot-flight-row {
@@ -495,7 +532,12 @@ h1 {
   .summary-grid,
   .management-form,
   .flight-form,
+  .airport-form,
+  .route-form,
   .aircraft-row,
+  .aircraft-management-row,
+  .airport-row,
+  .route-row,
   .pilot-row,
   .flight-edit-row,
   .pilot-flight-row,
