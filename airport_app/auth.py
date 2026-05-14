@@ -5,6 +5,7 @@ from .db import (
     create_pilot,
     get_pilot_by_user_id,
     get_user_for_login,
+    list_flights_for_pilot,
     verify_user_password,
 )
 
@@ -137,7 +138,8 @@ def pilot_dashboard():
         return redirect(url_for("auth.pilot_login"))
 
     pilot = get_pilot_by_user_id(session["user_id"])
-    return render_template("pilot/dashboard.html", user=pilot)
+    flights = list_flights_for_pilot(pilot["pilot_id"]) if pilot else []
+    return render_template("pilot/dashboard.html", user=pilot, flights=flights)
 
 
 @auth_bp.route("/logout")

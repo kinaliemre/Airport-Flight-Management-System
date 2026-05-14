@@ -8,7 +8,7 @@
     <div>
       <p class="eyebrow">Pilot</p>
       <h1 id="pilot-dashboard-title">Hoş geldiniz, {{ user.full_name }}</h1>
-      <p class="muted">Hesabınız başarıyla açıldı. Atanan uçuşlarınız bu panelde listelenecek.</p>
+      <p class="muted">Atanan uçuşlarınızı, uçak ve havalimanı bilgileriyle takip edin.</p>
     </div>
 
     <div class="summary-grid">
@@ -20,6 +20,52 @@
         <span>Kullanıcı adı</span>
         <strong>{{ user.username }}</strong>
       </article>
+    </div>
+
+    <div class="table-section">
+      <div class="section-heading">
+        <h2>Atanan Uçuşlar</h2>
+        <span>{{ flights|length }} kayıt</span>
+      </div>
+
+      {% if flights %}
+        <div class="data-list">
+          {% for flight in flights %}
+            <article class="data-row pilot-flight-row">
+              <div>
+                <strong>{{ flight.flight_number }}</strong>
+                <span>{{ flight.status }}</span>
+              </div>
+              <div>
+                <span>Kalkış havalimanı</span>
+                <strong>{{ flight.departure_iata }} - {{ flight.departure_airport }}</strong>
+                <span>{{ flight.departure_city }}, {{ flight.departure_country }}</span>
+              </div>
+              <div>
+                <span>Varış havalimanı</span>
+                <strong>{{ flight.destination_iata }} - {{ flight.destination_airport }}</strong>
+                <span>{{ flight.destination_city }}, {{ flight.destination_country }}</span>
+              </div>
+              <div>
+                <span>Uçak</span>
+                <strong>{{ flight.aircraft_name }}</strong>
+                <span>{{ flight.aircraft_model }} / {{ flight.aircraft_capacity }} koltuk</span>
+              </div>
+              <div>
+                <span>Kalkış</span>
+                <strong>{{ flight.departure_time }}</strong>
+              </div>
+              <div>
+                <span>Varış</span>
+                <strong>{{ flight.arrival_time }}</strong>
+                <span>{{ flight.estimated_duration_minutes }} dk</span>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty-state">Henüz size atanmış uçuş yok.</p>
+      {% endif %}
     </div>
 
     <a class="secondary-button" href="{{ url_for('auth.logout') }}">Çıkış yap</a>
