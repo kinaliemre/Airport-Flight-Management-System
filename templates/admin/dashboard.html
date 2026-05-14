@@ -254,6 +254,64 @@
 
     <div class="table-section">
       <div class="section-heading">
+        <h2>İptal Talepleri</h2>
+        <span>{{ cancellation_requests|length }} kayıt</span>
+      </div>
+
+      {% if cancellation_requests %}
+        <div class="data-list">
+          {% for request in cancellation_requests %}
+            <article class="data-row cancellation-request-row">
+              <div>
+                <strong>{{ request.flight_number }}</strong>
+                <span>{{ request.departure_iata }} - {{ request.destination_iata }}</span>
+              </div>
+              <div>
+                <span>Pilot</span>
+                <strong>{{ request.pilot_name }}</strong>
+                <span>{{ request.pilot_rank }}</span>
+              </div>
+              <div>
+                <span>Uçak</span>
+                <strong>{{ request.aircraft_name }}</strong>
+              </div>
+              <div>
+                <span>Zaman</span>
+                <strong>{{ request.departure_time }}</strong>
+                <span>{{ request.arrival_time }}</span>
+              </div>
+              <div>
+                <span>Sebep</span>
+                <strong>{{ request.reason }}</strong>
+              </div>
+              <div>
+                <span>Talep durumu</span>
+                <strong>{{ request.status }}</strong>
+                <span>Uçuş: {{ request.flight_status }}</span>
+              </div>
+              <div class="button-group">
+                {% if request.status == "pending" %}
+                  <form method="post" action="{{ url_for('admin.review_cancellation_request_route', request_id=request.id, action='approve') }}">
+                    <button type="submit">Onayla</button>
+                  </form>
+                  <form method="post" action="{{ url_for('admin.review_cancellation_request_route', request_id=request.id, action='reject') }}">
+                    <button class="danger-button" type="submit">Reddet</button>
+                  </form>
+                {% else %}
+                  <span>İncelendi</span>
+                  <strong>{{ request.reviewed_at or "-" }}</strong>
+                {% endif %}
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty-state">Henüz iptal talebi yok.</p>
+      {% endif %}
+    </div>
+
+    <div class="table-section">
+      <div class="section-heading">
         <h2>Rota Bilgileri</h2>
         <span>{{ stats.route_count }} kayıt</span>
       </div>

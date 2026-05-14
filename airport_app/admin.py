@@ -9,9 +9,11 @@ from .db import (
     get_admin_dashboard_stats,
     list_aircrafts,
     list_cabin_crews,
+    list_cancellation_requests,
     list_flights,
     list_pilots,
     list_routes,
+    review_cancellation_request,
     update_flight,
     update_pilot,
 )
@@ -41,11 +43,13 @@ def dashboard():
     routes = list_routes(session["user_id"])
     flights = list_flights(session["user_id"])
     pilots = list_pilots()
+    cancellation_requests = list_cancellation_requests(session["user_id"])
     stats = get_admin_dashboard_stats(session["user_id"])
     return render_template(
         "admin/dashboard.html",
         aircrafts=aircrafts,
         cabin_crews=cabin_crews,
+        cancellation_requests=cancellation_requests,
         flights=flights,
         pilots=pilots,
         routes=routes,
@@ -263,6 +267,37 @@ def cancel_flight_route(flight_id):
         flash("Uçuş iptal edildi.", "success")
     else:
         flash("Uçuş iptal edilemedi.", "error")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/cancellation-requests/<int:request_id>/<action>", methods=["POST"])
+def review_cancellation_request_route(request_id, action):
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    status_by_action = {
+        "approve": "approved",
+        "reject": "rejected",
+    }
+    status = status_by_action.get(action)
+    if status is None:
+        flash("Geçersiz talep işlemi.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    if review_cancellation_request(
+        user_id=session["user_id"],
+        request_id=request_id,
+        status=status,
+        reviewed_by=session["user_id"],
+    ):
+        if status == "approved":
+            flash("İptal talebi onaylandı ve uçuş iptal edildi.", "success")
+        else:
+            flash("İptal talebi reddedildi.", "success")
+    else:
+        flash("İptal talebi güncellenemedi.", "error")
 
     return redirect(url_for("admin.dashboard"))
 
