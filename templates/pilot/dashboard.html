@@ -60,6 +60,26 @@
                 <strong>{{ flight.arrival_time }}</strong>
                 <span>{{ flight.estimated_duration_minutes }} dk</span>
               </div>
+              <div>
+                {% set cancellation_request = request_by_flight.get(flight.id) %}
+                {% if cancellation_request %}
+                  <span>İptal talebi</span>
+                  <strong>{{ cancellation_request.status }}</strong>
+                  <span>{{ cancellation_request.reason }}</span>
+                {% else %}
+                  <form
+                    class="inline-request-form"
+                    method="post"
+                    action="{{ url_for('auth.create_pilot_cancellation_request', flight_id=flight.id) }}"
+                  >
+                    <label>
+                      İptal sebebi
+                      <textarea name="reason" rows="2" required></textarea>
+                    </label>
+                    <button type="submit">Talep gönder</button>
+                  </form>
+                {% endif %}
+              </div>
             </article>
           {% endfor %}
         </div>

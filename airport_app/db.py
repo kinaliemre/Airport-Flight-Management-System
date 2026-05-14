@@ -1,5 +1,6 @@
 import sqlite3
 from click import command, echo
+from datetime import datetime, timedelta
 from pathlib import Path
 
 from flask import current_app, g
@@ -126,6 +127,23 @@ def init_db():
                 PRIMARY KEY (flight_id, cabin_crew_id),
                 FOREIGN KEY (flight_id) REFERENCES flights (id) ON DELETE CASCADE,
                 FOREIGN KEY (cabin_crew_id) REFERENCES cabin_crews (id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS cancellation_requests (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                flight_id INTEGER NOT NULL,
+                pilot_id INTEGER NOT NULL,
+                reason TEXT NOT NULL,
+                status TEXT NOT NULL DEFAULT 'pending'
+                    CHECK (status IN ('pending', 'approved', 'rejected')),
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                reviewed_at TEXT,
+                reviewed_by INTEGER,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (flight_id) REFERENCES flights (id) ON DELETE CASCADE,
+                FOREIGN KEY (pilot_id) REFERENCES pilots (id) ON DELETE CASCADE,
+                FOREIGN KEY (reviewed_by) REFERENCES users (id) ON DELETE SET NULL
             );
             """
         )
@@ -684,6 +702,70 @@ def get_flight_by_id(flight_id, user_id):
         """,
         (flight_id, user_id),
     ).fetchone()
+
+
+def get_flight_for_pilot(flight_id, pilot_id):
+    return get_db().execute(
+        """
+        SELECT id, user_id, flight_number, pilot_id, departure_time, arrival_time, status
+        FROM flights
+        WHERE id = ? AND pilot_id = ?
+        """,
+        (flight_id, pilot_id),
+    ).fetchone()
+
+
+def is_cancellation_request_late(departure_time, now=None):
+    try:
+        departure_at = datetime.fromisoformat(departure_time)
+    except ValueError:
+        return True
+
+    current_time = now or datetime.now()
+    return departure_at - current_time < timedelta(hours=24)
+
+
+def create_cancellation_request(pilot_id, flight_id, reason, now=None):
+    db = get_db()
+    flight = get_flight_for_pilot(flight_id, pilot_id)
+    if flight is None or flight["status"] == "cancelled":
+        return None, "not_found"
+
+    if is_cancellation_request_late(flight["departure_time"], now):
+        return None, "late"
+
+    try:
+        cursor = db.execute(
+            """
+            INSERT INTO cancellation_requests (user_id, flight_id, pilot_id, reason)
+            VALUES (?, ?, ?, ?)
+            """,
+            (flight["user_id"], flight_id, pilot_id, reason),
+        )
+        db.commit()
+        return cursor.lastrowid, None
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return None, "invalid"
+
+
+def list_cancellation_requests_for_pilot(pilot_id):
+    return get_db().execute(
+        """
+        SELECT
+            cancellation_requests.id,
+            cancellation_requests.flight_id,
+            cancellation_requests.reason,
+            cancellation_requests.status,
+            cancellation_requests.created_at,
+            flights.flight_number
+        FROM cancellation_requests
+        JOIN flights ON flights.id = cancellation_requests.flight_id
+        WHERE cancellation_requests.pilot_id = ?
+        ORDER BY cancellation_requests.created_at DESC
+        """,
+        (pilot_id,),
+    ).fetchall()
 
 
 def update_flight(

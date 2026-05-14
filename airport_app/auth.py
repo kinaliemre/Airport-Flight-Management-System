@@ -2,9 +2,11 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 
 from .db import (
     create_admin,
+    create_cancellation_request,
     create_pilot,
     get_pilot_by_user_id,
     get_user_for_login,
+    list_cancellation_requests_for_pilot,
     list_flights_for_pilot,
     verify_user_password,
 )
@@ -139,7 +141,47 @@ def pilot_dashboard():
 
     pilot = get_pilot_by_user_id(session["user_id"])
     flights = list_flights_for_pilot(pilot["pilot_id"]) if pilot else []
-    return render_template("pilot/dashboard.html", user=pilot, flights=flights)
+    cancellation_requests = (
+        list_cancellation_requests_for_pilot(pilot["pilot_id"]) if pilot else []
+    )
+    request_by_flight = {
+        request["flight_id"]: request for request in cancellation_requests
+    }
+    return render_template(
+        "pilot/dashboard.html",
+        user=pilot,
+        flights=flights,
+        request_by_flight=request_by_flight,
+    )
+
+
+@auth_bp.route("/pilot/flights/<int:flight_id>/cancellation-requests", methods=["POST"])
+def create_pilot_cancellation_request(flight_id):
+    if session.get("role") != "pilot":
+        flash("Pilot paneline erişmek için giriş yapmalısınız.", "error")
+        return redirect(url_for("auth.pilot_login"))
+
+    pilot = get_pilot_by_user_id(session["user_id"])
+    reason = request.form.get("reason", "").strip()
+
+    if not reason:
+        flash("İptal talebi için sebep yazmalısınız.", "error")
+        return redirect(url_for("auth.pilot_dashboard"))
+
+    request_id, error = create_cancellation_request(
+        pilot_id=pilot["pilot_id"],
+        flight_id=flight_id,
+        reason=reason,
+    )
+
+    if request_id is not None:
+        flash("İptal talebiniz kaydedildi.", "success")
+    elif error == "late":
+        flash("Kalkışa 24 saatten az kaldığı için iptal talebi gönderilemez.", "error")
+    else:
+        flash("İptal talebi kaydedilemedi.", "error")
+
+    return redirect(url_for("auth.pilot_dashboard"))
 
 
 @auth_bp.route("/logout")
