@@ -1,6 +1,7 @@
-from flask import Blueprint, flash, redirect, render_template, session, url_for
+from flask import Blueprint, flash, redirect, render_template, request, session, url_for
 
 from .db import (
+    create_aircraft,
     get_admin_dashboard_stats,
     list_aircrafts,
     list_cabin_crews,
@@ -12,11 +13,19 @@ from .db import (
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 
-@admin_bp.route("/")
-def dashboard():
+def require_admin():
     if session.get("role") != "admin":
         flash("Yönetici paneline erişmek için giriş yapmalısınız.", "error")
         return redirect(url_for("auth.admin_login"))
+
+    return None
+
+
+@admin_bp.route("/")
+def dashboard():
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
 
     aircrafts = list_aircrafts(session["user_id"])
     cabin_crews = list_cabin_crews(session["user_id"])
@@ -31,6 +40,47 @@ def dashboard():
         routes=routes,
         stats=stats,
     )
+
+
+@admin_bp.route("/aircrafts", methods=["POST"])
+def add_aircraft():
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    name = request.form.get("name", "").strip()
+    model = request.form.get("model", "").strip()
+    capacity_text = request.form.get("capacity", "").strip()
+    seat_info = request.form.get("seat_info", "").strip()
+
+    if not all((name, model, capacity_text, seat_info)):
+        flash("Uçak eklemek için tüm alanları doldurun.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    try:
+        capacity = int(capacity_text)
+    except ValueError:
+        flash("Kapasite sayısal bir değer olmalıdır.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    if capacity <= 0:
+        flash("Kapasite 0'dan büyük olmalıdır.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    aircraft_id = create_aircraft(
+        user_id=session["user_id"],
+        name=name,
+        model=model,
+        capacity=capacity,
+        seat_info=seat_info,
+    )
+
+    if aircraft_id is None:
+        flash("Bu uçak adı zaten kayıtlı veya bilgiler geçersiz.", "error")
+    else:
+        flash("Uçak başarıyla eklendi.", "success")
+
+    return redirect(url_for("admin.dashboard"))
 
 
 @admin_bp.route("/old-login")

@@ -120,13 +120,33 @@ h1 {
   gap: 10px;
 }
 
+.management-form {
+  display: grid;
+  grid-template-columns: 1.1fr 1.1fr 0.7fr 1.2fr auto;
+  gap: 12px;
+  align-items: end;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 14px;
+}
+
 .auth-form label {
   margin-top: 8px;
   font-size: 14px;
   font-weight: 700;
 }
 
-.auth-form input {
+.management-form label {
+  display: grid;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.auth-form input,
+.management-form input {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -136,14 +156,15 @@ h1 {
   font: inherit;
 }
 
-.auth-form input:focus {
+.auth-form input:focus,
+.management-form input:focus {
   border-color: var(--primary);
   outline: 3px solid rgba(22, 103, 217, 0.14);
 }
 
-.auth-form button {
+.auth-form button,
+.management-form button {
   width: 100%;
-  margin-top: 14px;
   border: 0;
   border-radius: 6px;
   background: var(--primary);
@@ -154,7 +175,17 @@ h1 {
   padding: 12px 14px;
 }
 
-.auth-form button:hover {
+.auth-form button {
+  margin-top: 14px;
+}
+
+.management-form button {
+  min-height: 45px;
+  white-space: nowrap;
+}
+
+.auth-form button:hover,
+.management-form button:hover {
   background: var(--primary-hover);
 }
 
@@ -319,6 +350,10 @@ h1 {
   grid-template-columns: 1.4fr 1fr 0.6fr;
 }
 
+.aircraft-row {
+  grid-template-columns: 1.2fr 0.7fr 0.8fr 1fr;
+}
+
 .data-row span {
   display: block;
   color: var(--muted);
@@ -358,6 +393,8 @@ h1 {
   .auth-options,
   .metric-grid,
   .summary-grid,
+  .management-form,
+  .aircraft-row,
   .flight-row,
   .crew-row,
   .data-row {
