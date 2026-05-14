@@ -5,6 +5,7 @@ from .db import (
     create_aircraft,
     create_flight,
     create_pilot,
+    find_schedule_conflict,
     get_admin_dashboard_stats,
     list_aircrafts,
     list_cabin_crews,
@@ -180,6 +181,28 @@ def read_flight_form():
     return form_data, None
 
 
+def get_schedule_conflict_error(form_data, flight_id=None):
+    if form_data["status"] == "cancelled":
+        return None
+
+    conflict = find_schedule_conflict(
+        user_id=session["user_id"],
+        pilot_id=form_data["pilot_id"],
+        aircraft_id=form_data["aircraft_id"],
+        departure_time=form_data["departure_time"],
+        arrival_time=form_data["arrival_time"],
+        exclude_flight_id=flight_id,
+    )
+    if conflict is None:
+        return None
+
+    resource_label = "Pilot" if conflict["type"] == "pilot" else "Uçak"
+    return (
+        f"{resource_label} çakışması: {conflict['flight_number']} "
+        f"({conflict['departure_time']} - {conflict['arrival_time']})"
+    )
+
+
 @admin_bp.route("/flights", methods=["POST"])
 def add_flight():
     auth_redirect = require_admin()
@@ -189,6 +212,11 @@ def add_flight():
     form_data, error = read_flight_form()
     if error is not None:
         flash(error, "error")
+        return redirect(url_for("admin.dashboard"))
+
+    conflict_error = get_schedule_conflict_error(form_data)
+    if conflict_error is not None:
+        flash(conflict_error, "error")
         return redirect(url_for("admin.dashboard"))
 
     flight_id = create_flight(user_id=session["user_id"], **form_data)
@@ -210,6 +238,11 @@ def edit_flight(flight_id):
     form_data, error = read_flight_form()
     if error is not None:
         flash(error, "error")
+        return redirect(url_for("admin.dashboard"))
+
+    conflict_error = get_schedule_conflict_error(form_data, flight_id)
+    if conflict_error is not None:
+        flash(conflict_error, "error")
         return redirect(url_for("admin.dashboard"))
 
     if update_flight(user_id=session["user_id"], flight_id=flight_id, **form_data):

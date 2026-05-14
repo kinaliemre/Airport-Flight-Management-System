@@ -431,6 +431,80 @@ def get_route_by_id(route_id, user_id):
     ).fetchone()
 
 
+def find_schedule_conflict(
+    user_id,
+    pilot_id,
+    aircraft_id,
+    departure_time,
+    arrival_time,
+    exclude_flight_id=None,
+):
+    db = get_db()
+    params = (
+        user_id,
+        pilot_id,
+        arrival_time,
+        departure_time,
+        exclude_flight_id,
+        exclude_flight_id,
+    )
+    pilot_conflict = db.execute(
+        """
+        SELECT flight_number, departure_time, arrival_time
+        FROM flights
+        WHERE user_id = ?
+            AND pilot_id = ?
+            AND status != 'cancelled'
+            AND departure_time < ?
+            AND arrival_time > ?
+            AND (? IS NULL OR id != ?)
+        ORDER BY departure_time
+        LIMIT 1
+        """,
+        params,
+    ).fetchone()
+    if pilot_conflict is not None:
+        return {
+            "type": "pilot",
+            "flight_number": pilot_conflict["flight_number"],
+            "departure_time": pilot_conflict["departure_time"],
+            "arrival_time": pilot_conflict["arrival_time"],
+        }
+
+    params = (
+        user_id,
+        aircraft_id,
+        arrival_time,
+        departure_time,
+        exclude_flight_id,
+        exclude_flight_id,
+    )
+    aircraft_conflict = db.execute(
+        """
+        SELECT flight_number, departure_time, arrival_time
+        FROM flights
+        WHERE user_id = ?
+            AND aircraft_id = ?
+            AND status != 'cancelled'
+            AND departure_time < ?
+            AND arrival_time > ?
+            AND (? IS NULL OR id != ?)
+        ORDER BY departure_time
+        LIMIT 1
+        """,
+        params,
+    ).fetchone()
+    if aircraft_conflict is not None:
+        return {
+            "type": "aircraft",
+            "flight_number": aircraft_conflict["flight_number"],
+            "departure_time": aircraft_conflict["departure_time"],
+            "arrival_time": aircraft_conflict["arrival_time"],
+        }
+
+    return None
+
+
 def create_flight(
     user_id,
     flight_number,
@@ -447,6 +521,11 @@ def create_flight(
     aircraft = get_aircraft_by_id(aircraft_id, user_id)
     pilot = get_pilot_by_id(pilot_id)
     if route is None or aircraft is None or pilot is None:
+        return None
+
+    if status != "cancelled" and find_schedule_conflict(
+        user_id, pilot_id, aircraft_id, departure_time, arrival_time
+    ):
         return None
 
     try:
@@ -590,6 +669,11 @@ def update_flight(
     aircraft = get_aircraft_by_id(aircraft_id, user_id)
     pilot = get_pilot_by_id(pilot_id)
     if flight is None or route is None or aircraft is None or pilot is None:
+        return False
+
+    if status != "cancelled" and find_schedule_conflict(
+        user_id, pilot_id, aircraft_id, departure_time, arrival_time, flight_id
+    ):
         return False
 
     try:
