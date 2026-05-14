@@ -84,6 +84,65 @@
 
     <div class="table-section">
       <div class="section-heading">
+        <h2>Uçuş Oluştur</h2>
+      </div>
+
+      {% if routes and pilots and aircrafts %}
+        <form class="management-form flight-form" method="post" action="{{ url_for('admin.add_flight') }}">
+          <label>
+            Uçuş no
+            <input name="flight_number" type="text" placeholder="TK1001" required>
+          </label>
+          <label>
+            Rota
+            <select name="route_id" required>
+              {% for route in routes %}
+                <option value="{{ route.id }}">{{ route.departure_iata }} - {{ route.destination_iata }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Pilot
+            <select name="pilot_id" required>
+              {% for pilot in pilots %}
+                <option value="{{ pilot.pilot_id }}">{{ pilot.full_name }} - {{ pilot.rank }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Uçak
+            <select name="aircraft_id" required>
+              {% for aircraft in aircrafts %}
+                <option value="{{ aircraft.id }}">{{ aircraft.name }} - {{ aircraft.model }}</option>
+              {% endfor %}
+            </select>
+          </label>
+          <label>
+            Kalkış
+            <input name="departure_time" type="datetime-local" required>
+          </label>
+          <label>
+            Varış
+            <input name="arrival_time" type="datetime-local" required>
+          </label>
+          <label>
+            Durum
+            <select name="status" required>
+              <option value="scheduled">Planlandı</option>
+              <option value="delayed">Gecikti</option>
+              <option value="cancelled">İptal</option>
+              <option value="completed">Tamamlandı</option>
+            </select>
+          </label>
+          <button type="submit">Uçuş oluştur</button>
+        </form>
+      {% else %}
+        <p class="empty-state">Uçuş oluşturmak için en az bir rota, pilot ve uçak kaydı gerekir.</p>
+      {% endif %}
+    </div>
+
+    <div class="table-section">
+      <div class="section-heading">
         <h2>Pilotlar</h2>
         <span>{{ pilots|length }} kayıt</span>
       </div>
@@ -122,32 +181,70 @@
       {% if flights %}
         <div class="data-list">
           {% for flight in flights %}
-            <article class="data-row flight-row">
-              <div>
-                <strong>{{ flight.flight_number }}</strong>
-                <span>{{ flight.departure_iata }} - {{ flight.destination_iata }}</span>
+            <form class="data-row flight-edit-row" method="post" action="{{ url_for('admin.edit_flight', flight_id=flight.id) }}">
+              <label>
+                Uçuş no
+                <input name="flight_number" type="text" value="{{ flight.flight_number }}" required>
+              </label>
+              <label>
+                Rota
+                <select name="route_id" required>
+                  {% for route in routes %}
+                    <option value="{{ route.id }}" {% if route.id == flight.route_id %}selected{% endif %}>
+                      {{ route.departure_iata }} - {{ route.destination_iata }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label>
+                Pilot
+                <select name="pilot_id" required>
+                  {% for pilot in pilots %}
+                    <option value="{{ pilot.pilot_id }}" {% if pilot.pilot_id == flight.pilot_id %}selected{% endif %}>
+                      {{ pilot.full_name }} - {{ pilot.rank }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label>
+                Uçak
+                <select name="aircraft_id" required>
+                  {% for aircraft in aircrafts %}
+                    <option value="{{ aircraft.id }}" {% if aircraft.id == flight.aircraft_id %}selected{% endif %}>
+                      {{ aircraft.name }} - {{ aircraft.model }}
+                    </option>
+                  {% endfor %}
+                </select>
+              </label>
+              <label>
+                Kalkış
+                <input name="departure_time" type="datetime-local" value="{{ flight.departure_time }}" required>
+              </label>
+              <label>
+                Varış
+                <input name="arrival_time" type="datetime-local" value="{{ flight.arrival_time }}" required>
+              </label>
+              <label>
+                Durum
+                <select name="status" required>
+                  <option value="scheduled" {% if flight.status == "scheduled" %}selected{% endif %}>Planlandı</option>
+                  <option value="delayed" {% if flight.status == "delayed" %}selected{% endif %}>Gecikti</option>
+                  <option value="cancelled" {% if flight.status == "cancelled" %}selected{% endif %}>İptal</option>
+                  <option value="completed" {% if flight.status == "completed" %}selected{% endif %}>Tamamlandı</option>
+                </select>
+              </label>
+              <div class="button-group">
+                <button type="submit">Güncelle</button>
+                <button
+                  class="danger-button"
+                  type="submit"
+                  formaction="{{ url_for('admin.cancel_flight_route', flight_id=flight.id) }}"
+                  formnovalidate
+                >
+                  İptal et
+                </button>
               </div>
-              <div>
-                <span>Pilot</span>
-                <strong>{{ flight.pilot_name }}</strong>
-              </div>
-              <div>
-                <span>Uçak</span>
-                <strong>{{ flight.aircraft_name }}</strong>
-              </div>
-              <div>
-                <span>Kalkış</span>
-                <strong>{{ flight.departure_time }}</strong>
-              </div>
-              <div>
-                <span>Durum</span>
-                <strong>{{ flight.status }}</strong>
-              </div>
-              <div>
-                <span>Kabin ekibi</span>
-                <strong>{{ flight.cabin_crew_names or "Atanmadı" }}</strong>
-              </div>
-            </article>
+            </form>
           {% endfor %}
         </div>
       {% else %}

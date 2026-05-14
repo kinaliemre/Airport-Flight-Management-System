@@ -131,6 +131,10 @@ h1 {
   padding: 14px;
 }
 
+.flight-form {
+  grid-template-columns: 0.8fr 1fr 1.2fr 1.2fr 1fr 1fr 0.9fr auto;
+}
+
 .auth-form label {
   margin-top: 8px;
   font-size: 14px;
@@ -145,7 +149,8 @@ h1 {
   font-weight: 700;
 }
 
-.pilot-row label {
+.pilot-row label,
+.flight-edit-row label {
   display: grid;
   gap: 6px;
   color: var(--muted);
@@ -155,7 +160,10 @@ h1 {
 
 .auth-form input,
 .management-form input,
-.pilot-row input {
+.management-form select,
+.pilot-row input,
+.flight-edit-row input,
+.flight-edit-row select {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -167,14 +175,18 @@ h1 {
 
 .auth-form input:focus,
 .management-form input:focus,
-.pilot-row input:focus {
+.management-form select:focus,
+.pilot-row input:focus,
+.flight-edit-row input:focus,
+.flight-edit-row select:focus {
   border-color: var(--primary);
   outline: 3px solid rgba(22, 103, 217, 0.14);
 }
 
 .auth-form button,
 .management-form button,
-.pilot-row button {
+.pilot-row button,
+.flight-edit-row button {
   width: 100%;
   border: 0;
   border-radius: 6px;
@@ -201,9 +213,24 @@ h1 {
   white-space: nowrap;
 }
 
+.button-group {
+  display: grid;
+  gap: 8px;
+  align-self: end;
+}
+
+.danger-button {
+  background: var(--danger-text) !important;
+}
+
+.danger-button:hover {
+  background: #801b1b !important;
+}
+
 .auth-form button:hover,
 .management-form button:hover,
-.pilot-row button:hover {
+.pilot-row button:hover,
+.flight-edit-row button:hover {
   background: var(--primary-hover);
 }
 
@@ -248,7 +275,7 @@ h1 {
 }
 
 .dashboard-shell {
-  width: min(100%, 1040px);
+  width: min(100%, 1180px);
   display: grid;
   gap: 24px;
   border: 1px solid var(--line);
@@ -376,6 +403,10 @@ h1 {
   grid-template-columns: 1.2fr 1fr 0.9fr auto;
 }
 
+.flight-edit-row {
+  grid-template-columns: 0.7fr 0.9fr 1.1fr 1.1fr 1fr 1fr 0.8fr auto;
+}
+
 .data-row span {
   display: block;
   color: var(--muted);
@@ -416,8 +447,10 @@ h1 {
   .metric-grid,
   .summary-grid,
   .management-form,
+  .flight-form,
   .aircraft-row,
   .pilot-row,
+  .flight-edit-row,
   .flight-row,
   .crew-row,
   .data-row {
