@@ -6,6 +6,8 @@ Multi-user airport flight management system built with Flask and SQLite.
 
 - Admin and pilot authentication
 - Aircraft, pilot and flight management
+- Airport and route management for complete demo flow
+- Full CRUD coverage on aircraft records
 - Flight schedule conflict validation for pilots and aircraft
 - Pilot dashboard with assigned flights
 - Pilot cancellation requests
@@ -67,6 +69,7 @@ Tables are created automatically when the Flask app starts.
 ## Run Tests
 
 The tests use Python's built-in `unittest` module and temporary SQLite databases.
+They focus on business logic and database helper functions, not web routes.
 
 ```powershell
 python -m unittest
@@ -77,6 +80,8 @@ Current test coverage includes:
 - Admin registration and login
 - Pilot registration and login
 - Invalid login handling
+- Aircraft create, read, update and delete logic
+- Airport and route creation/update logic
 - Pilot schedule conflict checks
 - Aircraft schedule conflict checks
 - Flight update conflict checks

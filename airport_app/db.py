@@ -47,8 +47,10 @@ def init_db():
             CREATE TABLE IF NOT EXISTS pilots (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL UNIQUE,
+                owner_user_id INTEGER,
                 rank TEXT NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (owner_user_id) REFERENCES users (id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS aircrafts (
@@ -148,11 +150,21 @@ def init_db():
             """
         )
         db.commit()
+        ensure_schema_updates(db)
     except sqlite3.Error as error:
         db = g.get("db")
         if db is not None:
             db.rollback()
         raise DatabaseError("Veritabanı tabloları oluşturulamadı.") from error
+
+
+def ensure_schema_updates(db):
+    pilot_columns = {
+        row["name"] for row in db.execute("PRAGMA table_info(pilots)").fetchall()
+    }
+    if "owner_user_id" not in pilot_columns:
+        db.execute("ALTER TABLE pilots ADD COLUMN owner_user_id INTEGER")
+        db.commit()
 
 
 @command("init-db")
@@ -171,7 +183,7 @@ def init_app(app):
     app.cli.add_command(init_db_command)
 
 
-def create_user(full_name, username, password, role, rank=None):
+def create_user(full_name, username, password, role, rank=None, owner_user_id=None):
     db = get_db()
 
     try:
@@ -185,8 +197,8 @@ def create_user(full_name, username, password, role, rank=None):
 
         if role == "pilot":
             db.execute(
-                "INSERT INTO pilots (user_id, rank) VALUES (?, ?)",
-                (cursor.lastrowid, rank),
+                "INSERT INTO pilots (user_id, owner_user_id, rank) VALUES (?, ?, ?)",
+                (cursor.lastrowid, owner_user_id, rank),
             )
 
         db.commit()
@@ -200,8 +212,15 @@ def create_admin(full_name, username, password):
     return create_user(full_name, username, password, role="admin")
 
 
-def create_pilot(full_name, username, password, rank):
-    return create_user(full_name, username, password, role="pilot", rank=rank)
+def create_pilot(full_name, username, password, rank, owner_user_id=None):
+    return create_user(
+        full_name,
+        username,
+        password,
+        role="pilot",
+        rank=rank,
+        owner_user_id=owner_user_id,
+    )
 
 
 def get_user_by_id(user_id):
@@ -250,12 +269,19 @@ def get_pilot_by_id(pilot_id):
     ).fetchone()
 
 
-def list_pilots():
+def list_pilots(owner_user_id=None):
+    params = ()
+    owner_filter = ""
+    if owner_user_id is not None:
+        owner_filter = "AND (pilots.owner_user_id = ? OR pilots.owner_user_id IS NULL)"
+        params = (owner_user_id,)
+
     return get_db().execute(
-        """
+        f"""
         SELECT
             pilots.id AS pilot_id,
             pilots.rank,
+            pilots.owner_user_id,
             users.id AS user_id,
             users.full_name,
             users.username,
@@ -263,8 +289,10 @@ def list_pilots():
         FROM pilots
         JOIN users ON users.id = pilots.user_id
         WHERE users.role = 'pilot'
+            {owner_filter}
         ORDER BY users.full_name
-        """
+        """,
+        params,
     ).fetchall()
 
 
@@ -339,6 +367,44 @@ def list_aircrafts(user_id):
     ).fetchall()
 
 
+def update_aircraft(user_id, aircraft_id, name, model, capacity, seat_info):
+    db = get_db()
+    if get_aircraft_by_id(aircraft_id, user_id) is None:
+        return False
+
+    try:
+        db.execute(
+            """
+            UPDATE aircrafts
+            SET name = ?, model = ?, capacity = ?, seat_info = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (name, model, capacity, seat_info, aircraft_id, user_id),
+        )
+        db.commit()
+        return True
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return False
+
+
+def delete_aircraft(user_id, aircraft_id):
+    db = get_db()
+    if get_aircraft_by_id(aircraft_id, user_id) is None:
+        return False
+
+    try:
+        db.execute(
+            "DELETE FROM aircrafts WHERE id = ? AND user_id = ?",
+            (aircraft_id, user_id),
+        )
+        db.commit()
+        return True
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return False
+
+
 def create_airport(user_id, name, city, country, iata_code):
     db = get_db()
 
@@ -378,6 +444,27 @@ def list_airports(user_id):
         """,
         (user_id,),
     ).fetchall()
+
+
+def update_airport(user_id, airport_id, name, city, country, iata_code):
+    db = get_db()
+    if get_airport_by_id(airport_id, user_id) is None:
+        return False
+
+    try:
+        db.execute(
+            """
+            UPDATE airports
+            SET name = ?, city = ?, country = ?, iata_code = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (name, city, country, iata_code.upper(), airport_id, user_id),
+        )
+        db.commit()
+        return True
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return False
 
 
 def create_route(
@@ -420,6 +507,8 @@ def list_routes(user_id):
         """
         SELECT
             routes.id,
+            routes.departure_airport_id,
+            routes.destination_airport_id,
             routes.estimated_duration_minutes,
             departure.name AS departure_airport,
             departure.city AS departure_city,
@@ -447,6 +536,40 @@ def get_route_by_id(route_id, user_id):
         """,
         (route_id, user_id),
     ).fetchone()
+
+
+def update_route(
+    user_id, route_id, departure_airport_id, destination_airport_id, estimated_duration_minutes
+):
+    db = get_db()
+    route = get_route_by_id(route_id, user_id)
+    departure = get_airport_by_id(departure_airport_id, user_id)
+    destination = get_airport_by_id(destination_airport_id, user_id)
+    if route is None or departure is None or destination is None:
+        return False
+
+    try:
+        db.execute(
+            """
+            UPDATE routes
+            SET departure_airport_id = ?,
+                destination_airport_id = ?,
+                estimated_duration_minutes = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (
+                departure_airport_id,
+                destination_airport_id,
+                estimated_duration_minutes,
+                route_id,
+                user_id,
+            ),
+        )
+        db.commit()
+        return True
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return False
 
 
 def find_schedule_conflict(

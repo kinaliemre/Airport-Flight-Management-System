@@ -3,25 +3,275 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 from .db import (
     cancel_flight,
     create_aircraft,
+    create_airport,
     create_flight,
     create_pilot,
+    create_route,
+    delete_aircraft,
     find_schedule_conflict,
     get_admin_dashboard_stats,
     list_aircrafts,
+    list_airports,
     list_cabin_crews,
     list_cancellation_requests,
     list_flights,
     list_pilots,
     list_routes,
     review_cancellation_request,
+    update_aircraft,
+    update_airport,
     update_flight,
     update_pilot,
+    update_route,
 )
 
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
 FLIGHT_STATUSES = {"scheduled", "delayed", "cancelled", "completed"}
+AIRPORT_OPTIONS = [
+    {
+        "code": "IST",
+        "name": "Istanbul Airport",
+        "city": "Istanbul",
+        "country": "Turkiye",
+    },
+    {
+        "code": "SAW",
+        "name": "Sabiha Gokcen International Airport",
+        "city": "Istanbul",
+        "country": "Turkiye",
+    },
+    {
+        "code": "ESB",
+        "name": "Esenboga Airport",
+        "city": "Ankara",
+        "country": "Turkiye",
+    },
+    {
+        "code": "ADB",
+        "name": "Adnan Menderes Airport",
+        "city": "Izmir",
+        "country": "Turkiye",
+    },
+    {
+        "code": "AYT",
+        "name": "Antalya Airport",
+        "city": "Antalya",
+        "country": "Turkiye",
+    },
+    {
+        "code": "DLM",
+        "name": "Dalaman Airport",
+        "city": "Mugla",
+        "country": "Turkiye",
+    },
+    {
+        "code": "BJV",
+        "name": "Milas Bodrum Airport",
+        "city": "Mugla",
+        "country": "Turkiye",
+    },
+    {
+        "code": "TZX",
+        "name": "Trabzon Airport",
+        "city": "Trabzon",
+        "country": "Turkiye",
+    },
+    {
+        "code": "ADA",
+        "name": "Adana Sakirpasa Airport",
+        "city": "Adana",
+        "country": "Turkiye",
+    },
+    {
+        "code": "GZT",
+        "name": "Gaziantep Airport",
+        "city": "Gaziantep",
+        "country": "Turkiye",
+    },
+    {
+        "code": "FRA",
+        "name": "Frankfurt Airport",
+        "city": "Frankfurt",
+        "country": "Germany",
+    },
+    {
+        "code": "MUC",
+        "name": "Munich Airport",
+        "city": "Munich",
+        "country": "Germany",
+    },
+    {
+        "code": "BER",
+        "name": "Berlin Brandenburg Airport",
+        "city": "Berlin",
+        "country": "Germany",
+    },
+    {
+        "code": "DUS",
+        "name": "Dusseldorf Airport",
+        "city": "Dusseldorf",
+        "country": "Germany",
+    },
+    {
+        "code": "HAM",
+        "name": "Hamburg Airport",
+        "city": "Hamburg",
+        "country": "Germany",
+    },
+    {
+        "code": "CGN",
+        "name": "Cologne Bonn Airport",
+        "city": "Cologne",
+        "country": "Germany",
+    },
+    {
+        "code": "CDG",
+        "name": "Charles de Gaulle Airport",
+        "city": "Paris",
+        "country": "France",
+    },
+    {
+        "code": "ORY",
+        "name": "Paris Orly Airport",
+        "city": "Paris",
+        "country": "France",
+    },
+    {
+        "code": "NCE",
+        "name": "Nice Cote d'Azur Airport",
+        "city": "Nice",
+        "country": "France",
+    },
+    {
+        "code": "LYS",
+        "name": "Lyon Saint Exupery Airport",
+        "city": "Lyon",
+        "country": "France",
+    },
+    {
+        "code": "MRS",
+        "name": "Marseille Provence Airport",
+        "city": "Marseille",
+        "country": "France",
+    },
+    {
+        "code": "TLS",
+        "name": "Toulouse Blagnac Airport",
+        "city": "Toulouse",
+        "country": "France",
+    },
+    {
+        "code": "MAD",
+        "name": "Adolfo Suarez Madrid Barajas Airport",
+        "city": "Madrid",
+        "country": "Spain",
+    },
+    {
+        "code": "BCN",
+        "name": "Barcelona El Prat Airport",
+        "city": "Barcelona",
+        "country": "Spain",
+    },
+    {
+        "code": "PMI",
+        "name": "Palma de Mallorca Airport",
+        "city": "Palma",
+        "country": "Spain",
+    },
+    {
+        "code": "AGP",
+        "name": "Malaga Airport",
+        "city": "Malaga",
+        "country": "Spain",
+    },
+    {
+        "code": "ALC",
+        "name": "Alicante Elche Airport",
+        "city": "Alicante",
+        "country": "Spain",
+    },
+    {
+        "code": "VLC",
+        "name": "Valencia Airport",
+        "city": "Valencia",
+        "country": "Spain",
+    },
+    {
+        "code": "SVO",
+        "name": "Sheremetyevo International Airport",
+        "city": "Moscow",
+        "country": "Russia",
+    },
+    {
+        "code": "DME",
+        "name": "Domodedovo Airport",
+        "city": "Moscow",
+        "country": "Russia",
+    },
+    {
+        "code": "VKO",
+        "name": "Vnukovo International Airport",
+        "city": "Moscow",
+        "country": "Russia",
+    },
+    {
+        "code": "LED",
+        "name": "Pulkovo Airport",
+        "city": "Saint Petersburg",
+        "country": "Russia",
+    },
+    {
+        "code": "AER",
+        "name": "Sochi International Airport",
+        "city": "Sochi",
+        "country": "Russia",
+    },
+    {
+        "code": "KZN",
+        "name": "Kazan International Airport",
+        "city": "Kazan",
+        "country": "Russia",
+    },
+    {
+        "code": "LHR",
+        "name": "Heathrow Airport",
+        "city": "London",
+        "country": "United Kingdom",
+    },
+    {
+        "code": "LGW",
+        "name": "Gatwick Airport",
+        "city": "London",
+        "country": "United Kingdom",
+    },
+    {
+        "code": "MAN",
+        "name": "Manchester Airport",
+        "city": "Manchester",
+        "country": "United Kingdom",
+    },
+    {
+        "code": "STN",
+        "name": "Stansted Airport",
+        "city": "London",
+        "country": "United Kingdom",
+    },
+    {
+        "code": "EDI",
+        "name": "Edinburgh Airport",
+        "city": "Edinburgh",
+        "country": "United Kingdom",
+    },
+    {
+        "code": "BHX",
+        "name": "Birmingham Airport",
+        "city": "Birmingham",
+        "country": "United Kingdom",
+    },
+]
+AIRPORT_OPTIONS_BY_CODE = {airport["code"]: airport for airport in AIRPORT_OPTIONS}
 
 
 def require_admin():
@@ -32,6 +282,18 @@ def require_admin():
     return None
 
 
+def parse_positive_int(value, field_name):
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return None, f"{field_name} sayısal bir değer olmalıdır."
+
+    if number <= 0:
+        return None, f"{field_name} 0'dan büyük olmalıdır."
+
+    return number, None
+
+
 @admin_bp.route("/")
 def dashboard():
     auth_redirect = require_admin()
@@ -39,15 +301,18 @@ def dashboard():
         return auth_redirect
 
     aircrafts = list_aircrafts(session["user_id"])
+    airports = list_airports(session["user_id"])
     cabin_crews = list_cabin_crews(session["user_id"])
     routes = list_routes(session["user_id"])
     flights = list_flights(session["user_id"])
-    pilots = list_pilots()
+    pilots = list_pilots(session["user_id"])
     cancellation_requests = list_cancellation_requests(session["user_id"])
     stats = get_admin_dashboard_stats(session["user_id"])
     return render_template(
         "admin/dashboard.html",
         aircrafts=aircrafts,
+        airport_options=AIRPORT_OPTIONS,
+        airports=airports,
         cabin_crews=cabin_crews,
         cancellation_requests=cancellation_requests,
         flights=flights,
@@ -65,35 +330,165 @@ def add_aircraft():
 
     name = request.form.get("name", "").strip()
     model = request.form.get("model", "").strip()
-    capacity_text = request.form.get("capacity", "").strip()
+    capacity, error = parse_positive_int(request.form.get("capacity", ""), "Kapasite")
     seat_info = request.form.get("seat_info", "").strip()
 
-    if not all((name, model, capacity_text, seat_info)):
-        flash("Uçak eklemek için tüm alanları doldurun.", "error")
+    if not all((name, model, seat_info)) or error is not None:
+        flash(error or "Uçak eklemek için tüm alanları doldurun.", "error")
         return redirect(url_for("admin.dashboard"))
 
-    try:
-        capacity = int(capacity_text)
-    except ValueError:
-        flash("Kapasite sayısal bir değer olmalıdır.", "error")
-        return redirect(url_for("admin.dashboard"))
-
-    if capacity <= 0:
-        flash("Kapasite 0'dan büyük olmalıdır.", "error")
-        return redirect(url_for("admin.dashboard"))
-
-    aircraft_id = create_aircraft(
-        user_id=session["user_id"],
-        name=name,
-        model=model,
-        capacity=capacity,
-        seat_info=seat_info,
-    )
-
+    aircraft_id = create_aircraft(session["user_id"], name, model, capacity, seat_info)
     if aircraft_id is None:
         flash("Bu uçak adı zaten kayıtlı veya bilgiler geçersiz.", "error")
     else:
         flash("Uçak başarıyla eklendi.", "success")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/aircrafts/<int:aircraft_id>", methods=["POST"])
+def edit_aircraft(aircraft_id):
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    name = request.form.get("name", "").strip()
+    model = request.form.get("model", "").strip()
+    capacity, error = parse_positive_int(request.form.get("capacity", ""), "Kapasite")
+    seat_info = request.form.get("seat_info", "").strip()
+
+    if not all((name, model, seat_info)) or error is not None:
+        flash(error or "Uçak bilgilerini güncellemek için tüm alanları doldurun.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    if update_aircraft(session["user_id"], aircraft_id, name, model, capacity, seat_info):
+        flash("Uçak bilgileri güncellendi.", "success")
+    else:
+        flash("Uçak güncellenemedi. İsim çakışması veya geçersiz bilgi olabilir.", "error")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/aircrafts/<int:aircraft_id>/delete", methods=["POST"])
+def remove_aircraft(aircraft_id):
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    if delete_aircraft(session["user_id"], aircraft_id):
+        flash("Uçak silindi.", "success")
+    else:
+        flash("Uçak silinemedi. Bağlı uçuş kaydı olabilir.", "error")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/airports", methods=["POST"])
+def add_airport():
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    airport_code = request.form.get("airport_code", "").strip().upper()
+    selected_airport = AIRPORT_OPTIONS_BY_CODE.get(airport_code)
+
+    if selected_airport is None:
+        flash("Listeden geçerli bir havalimanı seçin.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    airport_id = create_airport(
+        session["user_id"],
+        selected_airport["name"],
+        selected_airport["city"],
+        selected_airport["country"],
+        selected_airport["code"],
+    )
+    if airport_id is None:
+        flash("Bu IATA kodu zaten kayıtlı veya bilgiler geçersiz.", "error")
+    else:
+        flash("Havalimanı başarıyla eklendi.", "success")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/airports/<int:airport_id>", methods=["POST"])
+def edit_airport(airport_id):
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    name = request.form.get("name", "").strip()
+    city = request.form.get("city", "").strip()
+    country = request.form.get("country", "").strip()
+    iata_code = request.form.get("iata_code", "").strip()
+
+    if not all((name, city, country, iata_code)):
+        flash("Havalimanı bilgilerini güncellemek için tüm alanları doldurun.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    if update_airport(session["user_id"], airport_id, name, city, country, iata_code):
+        flash("Havalimanı bilgileri güncellendi.", "success")
+    else:
+        flash("Havalimanı güncellenemedi.", "error")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/routes", methods=["POST"])
+def add_route():
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    departure_id, departure_error = parse_positive_int(
+        request.form.get("departure_airport_id"), "Kalkış havalimanı"
+    )
+    destination_id, destination_error = parse_positive_int(
+        request.form.get("destination_airport_id"), "Varış havalimanı"
+    )
+    duration, duration_error = parse_positive_int(
+        request.form.get("estimated_duration_minutes"), "Süre"
+    )
+    error = departure_error or destination_error or duration_error
+
+    if error is not None:
+        flash(error, "error")
+        return redirect(url_for("admin.dashboard"))
+
+    route_id = create_route(session["user_id"], departure_id, destination_id, duration)
+    if route_id is None:
+        flash("Rota oluşturulamadı. Havalimanları farklı olmalı ve rota tekrar etmemeli.", "error")
+    else:
+        flash("Rota başarıyla oluşturuldu.", "success")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/routes/<int:route_id>", methods=["POST"])
+def edit_route(route_id):
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    departure_id, departure_error = parse_positive_int(
+        request.form.get("departure_airport_id"), "Kalkış havalimanı"
+    )
+    destination_id, destination_error = parse_positive_int(
+        request.form.get("destination_airport_id"), "Varış havalimanı"
+    )
+    duration, duration_error = parse_positive_int(
+        request.form.get("estimated_duration_minutes"), "Süre"
+    )
+    error = departure_error or destination_error or duration_error
+
+    if error is not None:
+        flash(error, "error")
+        return redirect(url_for("admin.dashboard"))
+
+    if update_route(session["user_id"], route_id, departure_id, destination_id, duration):
+        flash("Rota bilgileri güncellendi.", "success")
+    else:
+        flash("Rota güncellenemedi.", "error")
 
     return redirect(url_for("admin.dashboard"))
 
@@ -113,13 +508,7 @@ def add_pilot():
         flash("Pilot eklemek için tüm alanları doldurun.", "error")
         return redirect(url_for("admin.dashboard"))
 
-    pilot_id = create_pilot(
-        full_name=full_name,
-        username=username,
-        password=password,
-        rank=rank,
-    )
-
+    pilot_id = create_pilot(full_name, username, password, rank, session["user_id"])
     if pilot_id is None:
         flash("Bu kullanıcı adı zaten kayıtlı.", "error")
     else:
@@ -142,12 +531,7 @@ def edit_pilot(pilot_id):
         flash("Pilot bilgilerini güncellemek için tüm alanları doldurun.", "error")
         return redirect(url_for("admin.dashboard"))
 
-    if update_pilot(
-        pilot_id=pilot_id,
-        full_name=full_name,
-        username=username,
-        rank=rank,
-    ):
+    if update_pilot(pilot_id, full_name, username, rank):
         flash("Pilot bilgileri güncellendi.", "success")
     else:
         flash("Pilot bulunamadı veya kullanıcı adı zaten kayıtlı.", "error")
@@ -224,7 +608,6 @@ def add_flight():
         return redirect(url_for("admin.dashboard"))
 
     flight_id = create_flight(user_id=session["user_id"], **form_data)
-
     if flight_id is None:
         flash("Uçuş oluşturulamadı. Uçuş numarası veya seçimler geçersiz olabilir.", "error")
     else:
@@ -277,10 +660,7 @@ def review_cancellation_request_route(request_id, action):
     if auth_redirect is not None:
         return auth_redirect
 
-    status_by_action = {
-        "approve": "approved",
-        "reject": "rejected",
-    }
+    status_by_action = {"approve": "approved", "reject": "rejected"}
     status = status_by_action.get(action)
     if status is None:
         flash("Geçersiz talep işlemi.", "error")
