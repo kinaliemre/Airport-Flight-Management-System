@@ -768,6 +768,91 @@ def list_cancellation_requests_for_pilot(pilot_id):
     ).fetchall()
 
 
+def list_cancellation_requests(user_id):
+    return get_db().execute(
+        """
+        SELECT
+            cancellation_requests.id,
+            cancellation_requests.flight_id,
+            cancellation_requests.pilot_id,
+            cancellation_requests.reason,
+            cancellation_requests.status,
+            cancellation_requests.created_at,
+            cancellation_requests.reviewed_at,
+            cancellation_requests.reviewed_by,
+            flights.flight_number,
+            flights.departure_time,
+            flights.arrival_time,
+            flights.status AS flight_status,
+            pilot_user.full_name AS pilot_name,
+            pilots.rank AS pilot_rank,
+            aircrafts.name AS aircraft_name,
+            departure.iata_code AS departure_iata,
+            destination.iata_code AS destination_iata
+        FROM cancellation_requests
+        JOIN flights ON flights.id = cancellation_requests.flight_id
+        JOIN pilots ON pilots.id = cancellation_requests.pilot_id
+        JOIN users AS pilot_user ON pilot_user.id = pilots.user_id
+        JOIN aircrafts ON aircrafts.id = flights.aircraft_id
+        JOIN routes ON routes.id = flights.route_id
+        JOIN airports AS departure ON departure.id = routes.departure_airport_id
+        JOIN airports AS destination ON destination.id = routes.destination_airport_id
+        WHERE cancellation_requests.user_id = ?
+        ORDER BY
+            CASE cancellation_requests.status
+                WHEN 'pending' THEN 0
+                WHEN 'approved' THEN 1
+                ELSE 2
+            END,
+            cancellation_requests.created_at DESC
+        """,
+        (user_id,),
+    ).fetchall()
+
+
+def review_cancellation_request(user_id, request_id, status, reviewed_by):
+    if status not in {"approved", "rejected"}:
+        return False
+
+    db = get_db()
+    request_row = db.execute(
+        """
+        SELECT id, flight_id, status
+        FROM cancellation_requests
+        WHERE id = ? AND user_id = ?
+        """,
+        (request_id, user_id),
+    ).fetchone()
+    if request_row is None or request_row["status"] != "pending":
+        return False
+
+    try:
+        db.execute(
+            """
+            UPDATE cancellation_requests
+            SET status = ?, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = ?
+            WHERE id = ? AND user_id = ?
+            """,
+            (status, reviewed_by, request_id, user_id),
+        )
+
+        if status == "approved":
+            db.execute(
+                """
+                UPDATE flights
+                SET status = 'cancelled'
+                WHERE id = ? AND user_id = ?
+                """,
+                (request_row["flight_id"], user_id),
+            )
+
+        db.commit()
+        return True
+    except sqlite3.Error:
+        db.rollback()
+        return False
+
+
 def update_flight(
     user_id,
     flight_id,

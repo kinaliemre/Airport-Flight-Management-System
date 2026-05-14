@@ -188,7 +188,8 @@ h1 {
 .auth-form button,
 .management-form button,
 .pilot-row button,
-.flight-edit-row button {
+.flight-edit-row button,
+.cancellation-request-row button {
   width: 100%;
   border: 0;
   border-radius: 6px;
@@ -265,7 +266,8 @@ h1 {
 .auth-form button:hover,
 .management-form button:hover,
 .pilot-row button:hover,
-.flight-edit-row button:hover {
+.flight-edit-row button:hover,
+.cancellation-request-row button:hover {
   background: var(--primary-hover);
 }
 
@@ -447,6 +449,11 @@ h1 {
   align-items: start;
 }
 
+.cancellation-request-row {
+  grid-template-columns: 0.8fr 1fr 0.8fr 1fr 1.3fr 0.8fr auto;
+  align-items: start;
+}
+
 .data-row span {
   display: block;
   color: var(--muted);
@@ -492,6 +499,7 @@ h1 {
   .pilot-row,
   .flight-edit-row,
   .pilot-flight-row,
+  .cancellation-request-row,
   .flight-row,
   .crew-row,
   .data-row {
