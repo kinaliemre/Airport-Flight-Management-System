@@ -145,8 +145,17 @@ h1 {
   font-weight: 700;
 }
 
+.pilot-row label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .auth-form input,
-.management-form input {
+.management-form input,
+.pilot-row input {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -157,13 +166,15 @@ h1 {
 }
 
 .auth-form input:focus,
-.management-form input:focus {
+.management-form input:focus,
+.pilot-row input:focus {
   border-color: var(--primary);
   outline: 3px solid rgba(22, 103, 217, 0.14);
 }
 
 .auth-form button,
-.management-form button {
+.management-form button,
+.pilot-row button {
   width: 100%;
   border: 0;
   border-radius: 6px;
@@ -184,8 +195,15 @@ h1 {
   white-space: nowrap;
 }
 
+.pilot-row button {
+  align-self: end;
+  min-height: 43px;
+  white-space: nowrap;
+}
+
 .auth-form button:hover,
-.management-form button:hover {
+.management-form button:hover,
+.pilot-row button:hover {
   background: var(--primary-hover);
 }
 
@@ -354,6 +372,10 @@ h1 {
   grid-template-columns: 1.2fr 0.7fr 0.8fr 1fr;
 }
 
+.pilot-row {
+  grid-template-columns: 1.2fr 1fr 0.9fr auto;
+}
+
 .data-row span {
   display: block;
   color: var(--muted);
@@ -395,6 +417,7 @@ h1 {
   .summary-grid,
   .management-form,
   .aircraft-row,
+  .pilot-row,
   .flight-row,
   .crew-row,
   .data-row {

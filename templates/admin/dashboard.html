@@ -58,6 +58,63 @@
 
     <div class="table-section">
       <div class="section-heading">
+        <h2>Pilot Ekle</h2>
+      </div>
+
+      <form class="management-form pilot-form" method="post" action="{{ url_for('admin.add_pilot') }}">
+        <label>
+          Ad soyad
+          <input name="full_name" type="text" placeholder="Ayşe Yılmaz" required>
+        </label>
+        <label>
+          Kullanıcı adı
+          <input name="username" type="text" placeholder="ayse.yilmaz" required>
+        </label>
+        <label>
+          Şifre
+          <input name="password" type="password" required>
+        </label>
+        <label>
+          Rütbe
+          <input name="rank" type="text" placeholder="Kaptan pilot" required>
+        </label>
+        <button type="submit">Pilot ekle</button>
+      </form>
+    </div>
+
+    <div class="table-section">
+      <div class="section-heading">
+        <h2>Pilotlar</h2>
+        <span>{{ pilots|length }} kayıt</span>
+      </div>
+
+      {% if pilots %}
+        <div class="data-list">
+          {% for pilot in pilots %}
+            <form class="data-row pilot-row" method="post" action="{{ url_for('admin.edit_pilot', pilot_id=pilot.pilot_id) }}">
+              <label>
+                Ad soyad
+                <input name="full_name" type="text" value="{{ pilot.full_name }}" required>
+              </label>
+              <label>
+                Kullanıcı adı
+                <input name="username" type="text" value="{{ pilot.username }}" required>
+              </label>
+              <label>
+                Rütbe
+                <input name="rank" type="text" value="{{ pilot.rank }}" required>
+              </label>
+              <button type="submit">Güncelle</button>
+            </form>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty-state">Henüz kayıtlı pilot yok.</p>
+      {% endif %}
+    </div>
+
+    <div class="table-section">
+      <div class="section-heading">
         <h2>Uçuş Listesi</h2>
         <span>{{ stats.flight_count }} kayıt</span>
       </div>
