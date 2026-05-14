@@ -2,11 +2,14 @@ from flask import Blueprint, flash, redirect, render_template, request, session,
 
 from .db import (
     create_aircraft,
+    create_pilot,
     get_admin_dashboard_stats,
     list_aircrafts,
     list_cabin_crews,
     list_flights,
+    list_pilots,
     list_routes,
+    update_pilot,
 )
 
 
@@ -31,12 +34,14 @@ def dashboard():
     cabin_crews = list_cabin_crews(session["user_id"])
     routes = list_routes(session["user_id"])
     flights = list_flights(session["user_id"])
+    pilots = list_pilots()
     stats = get_admin_dashboard_stats(session["user_id"])
     return render_template(
         "admin/dashboard.html",
         aircrafts=aircrafts,
         cabin_crews=cabin_crews,
         flights=flights,
+        pilots=pilots,
         routes=routes,
         stats=stats,
     )
@@ -79,6 +84,63 @@ def add_aircraft():
         flash("Bu uçak adı zaten kayıtlı veya bilgiler geçersiz.", "error")
     else:
         flash("Uçak başarıyla eklendi.", "success")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/pilots", methods=["POST"])
+def add_pilot():
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    full_name = request.form.get("full_name", "").strip()
+    username = request.form.get("username", "").strip()
+    password = request.form.get("password", "").strip()
+    rank = request.form.get("rank", "").strip()
+
+    if not all((full_name, username, password, rank)):
+        flash("Pilot eklemek için tüm alanları doldurun.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    pilot_id = create_pilot(
+        full_name=full_name,
+        username=username,
+        password=password,
+        rank=rank,
+    )
+
+    if pilot_id is None:
+        flash("Bu kullanıcı adı zaten kayıtlı.", "error")
+    else:
+        flash("Pilot başarıyla eklendi.", "success")
+
+    return redirect(url_for("admin.dashboard"))
+
+
+@admin_bp.route("/pilots/<int:pilot_id>", methods=["POST"])
+def edit_pilot(pilot_id):
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    full_name = request.form.get("full_name", "").strip()
+    username = request.form.get("username", "").strip()
+    rank = request.form.get("rank", "").strip()
+
+    if not all((full_name, username, rank)):
+        flash("Pilot bilgilerini güncellemek için tüm alanları doldurun.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    if update_pilot(
+        pilot_id=pilot_id,
+        full_name=full_name,
+        username=username,
+        rank=rank,
+    ):
+        flash("Pilot bilgileri güncellendi.", "success")
+    else:
+        flash("Pilot bulunamadı veya kullanıcı adı zaten kayıtlı.", "error")
 
     return redirect(url_for("admin.dashboard"))
 

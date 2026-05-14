@@ -232,6 +232,54 @@ def get_pilot_by_id(pilot_id):
     ).fetchone()
 
 
+def list_pilots():
+    return get_db().execute(
+        """
+        SELECT
+            pilots.id AS pilot_id,
+            pilots.rank,
+            users.id AS user_id,
+            users.full_name,
+            users.username,
+            users.created_at
+        FROM pilots
+        JOIN users ON users.id = pilots.user_id
+        WHERE users.role = 'pilot'
+        ORDER BY users.full_name
+        """
+    ).fetchall()
+
+
+def update_pilot(pilot_id, full_name, username, rank):
+    db = get_db()
+    pilot = get_pilot_by_id(pilot_id)
+    if pilot is None:
+        return False
+
+    try:
+        db.execute(
+            """
+            UPDATE users
+            SET full_name = ?, username = ?
+            WHERE id = ? AND role = 'pilot'
+            """,
+            (full_name, username, pilot["user_id"]),
+        )
+        db.execute(
+            """
+            UPDATE pilots
+            SET rank = ?
+            WHERE id = ?
+            """,
+            (rank, pilot_id),
+        )
+        db.commit()
+        return True
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return False
+
+
 def create_aircraft(user_id, name, model, capacity, seat_info):
     db = get_db()
 
