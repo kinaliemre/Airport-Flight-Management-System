@@ -163,7 +163,8 @@ h1 {
 .management-form select,
 .pilot-row input,
 .flight-edit-row input,
-.flight-edit-row select {
+.flight-edit-row select,
+.inline-request-form textarea {
   width: 100%;
   border: 1px solid var(--line);
   border-radius: 6px;
@@ -178,7 +179,8 @@ h1 {
 .management-form select:focus,
 .pilot-row input:focus,
 .flight-edit-row input:focus,
-.flight-edit-row select:focus {
+.flight-edit-row select:focus,
+.inline-request-form textarea:focus {
   border-color: var(--primary);
   outline: 3px solid rgba(22, 103, 217, 0.14);
 }
@@ -196,6 +198,39 @@ h1 {
   font: inherit;
   font-weight: 700;
   padding: 12px 14px;
+}
+
+.inline-request-form {
+  display: grid;
+  gap: 8px;
+}
+
+.inline-request-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.inline-request-form textarea {
+  min-height: 70px;
+  resize: vertical;
+}
+
+.inline-request-form button {
+  border: 0;
+  border-radius: 6px;
+  background: var(--primary);
+  color: #ffffff;
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 10px 12px;
+}
+
+.inline-request-form button:hover {
+  background: var(--primary-hover);
 }
 
 .auth-form button {
@@ -408,7 +443,7 @@ h1 {
 }
 
 .pilot-flight-row {
-  grid-template-columns: 0.7fr 1.4fr 1.4fr 1.1fr 0.9fr 0.9fr;
+  grid-template-columns: 0.7fr 1.3fr 1.3fr 1fr 0.8fr 0.8fr 1.2fr;
   align-items: start;
 }
 
