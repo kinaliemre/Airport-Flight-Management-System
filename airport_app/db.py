@@ -893,9 +893,10 @@ def create_flight(
         return None
 
 
-def list_flights(user_id):
+def list_flights(user_id, include_cancelled=True):
+    status_filter = "" if include_cancelled else "AND flights.status != 'cancelled'"
     return get_db().execute(
-        """
+        f"""
         SELECT
             flights.id,
             flights.flight_number,
@@ -925,8 +926,39 @@ def list_flights(user_id):
         LEFT JOIN flight_cabin_crews ON flight_cabin_crews.flight_id = flights.id
         LEFT JOIN cabin_crews ON cabin_crews.id = flight_cabin_crews.cabin_crew_id
         WHERE flights.user_id = ?
+            {status_filter}
         GROUP BY flights.id
         ORDER BY flights.departure_time
+        """,
+        (user_id,),
+    ).fetchall()
+
+
+def list_cancelled_flights(user_id):
+    return get_db().execute(
+        """
+        SELECT
+            flights.id,
+            flights.flight_number,
+            flights.departure_time,
+            flights.arrival_time,
+            pilot_user.full_name AS pilot_name,
+            aircrafts.name AS aircraft_name,
+            aircrafts.model AS aircraft_model,
+            departure.city AS departure_city,
+            departure.iata_code AS departure_iata,
+            destination.city AS destination_city,
+            destination.iata_code AS destination_iata
+        FROM flights
+        JOIN pilots ON pilots.id = flights.pilot_id
+        JOIN users AS pilot_user ON pilot_user.id = pilots.user_id
+        JOIN aircrafts ON aircrafts.id = flights.aircraft_id
+        JOIN routes ON routes.id = flights.route_id
+        JOIN airports AS departure ON departure.id = routes.departure_airport_id
+        JOIN airports AS destination ON destination.id = routes.destination_airport_id
+        WHERE flights.user_id = ?
+            AND flights.status = 'cancelled'
+        ORDER BY flights.departure_time DESC
         """,
         (user_id,),
     ).fetchall()
@@ -1194,11 +1226,19 @@ def is_cancellation_request_late(departure_time, now=None):
 def create_cancellation_request(pilot_id, flight_id, reason, now=None):
     db = get_db()
     flight = get_flight_for_pilot(flight_id, pilot_id)
-    if flight is None or flight["status"] == "cancelled":
+    if flight is None:
         return None, "not_found"
 
-    if is_cancellation_request_late(flight["departure_time"], now):
-        return None, "late"
+    existing_request = db.execute(
+        """
+        SELECT id
+        FROM cancellation_requests
+        WHERE flight_id = ? AND pilot_id = ? AND status = 'pending'
+        """,
+        (flight_id, pilot_id),
+    ).fetchone()
+    if existing_request is not None:
+        return existing_request["id"], None
 
     try:
         cursor = db.execute(
@@ -1263,7 +1303,6 @@ def list_cancellation_requests(user_id):
         JOIN routes ON routes.id = flights.route_id
         JOIN airports AS departure ON departure.id = routes.departure_airport_id
         JOIN airports AS destination ON destination.id = routes.destination_airport_id
-        WHERE cancellation_requests.user_id = ?
         ORDER BY
             CASE cancellation_requests.status
                 WHEN 'pending' THEN 0
@@ -1272,7 +1311,6 @@ def list_cancellation_requests(user_id):
             END,
             cancellation_requests.created_at DESC
         """,
-        (user_id,),
     ).fetchall()
 
 
@@ -1283,11 +1321,13 @@ def review_cancellation_request(user_id, request_id, status, reviewed_by):
     db = get_db()
     request_row = db.execute(
         """
-        SELECT id, flight_id, status
+        SELECT cancellation_requests.id, cancellation_requests.flight_id, cancellation_requests.status,
+               flights.user_id AS flight_owner_id
         FROM cancellation_requests
-        WHERE id = ? AND user_id = ?
+        JOIN flights ON flights.id = cancellation_requests.flight_id
+        WHERE cancellation_requests.id = ?
         """,
-        (request_id, user_id),
+        (request_id,),
     ).fetchone()
     if request_row is None or request_row["status"] != "pending":
         return False
@@ -1297,9 +1337,9 @@ def review_cancellation_request(user_id, request_id, status, reviewed_by):
             """
             UPDATE cancellation_requests
             SET status = ?, reviewed_at = CURRENT_TIMESTAMP, reviewed_by = ?
-            WHERE id = ? AND user_id = ?
+            WHERE id = ?
             """,
-            (status, reviewed_by, request_id, user_id),
+            (status, reviewed_by, request_id),
         )
 
         if status == "approved":
@@ -1307,9 +1347,9 @@ def review_cancellation_request(user_id, request_id, status, reviewed_by):
                 """
                 UPDATE flights
                 SET status = 'cancelled'
-                WHERE id = ? AND user_id = ?
+                WHERE id = ?
                 """,
-                (request_row["flight_id"], user_id),
+                (request_row["flight_id"],),
             )
 
         db.commit()

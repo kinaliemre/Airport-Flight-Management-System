@@ -15,6 +15,7 @@ from .db import (
     get_cabin_crew_group_member_ids,
     list_aircrafts,
     list_airports,
+    list_cancelled_flights,
     list_cabin_crew_groups,
     list_cabin_crews,
     list_cancellation_requests,
@@ -309,7 +310,8 @@ def dashboard():
     cabin_crews = list_cabin_crews(session["user_id"])
     cabin_crew_groups = list_cabin_crew_groups(session["user_id"])
     routes = list_routes(session["user_id"])
-    flights = list_flights(session["user_id"])
+    flights = list_flights(session["user_id"], include_cancelled=False)
+    cancelled_flights = list_cancelled_flights(session["user_id"])
     pilots = list_pilots(session["user_id"])
     cancellation_requests = list_cancellation_requests(session["user_id"])
     stats = get_admin_dashboard_stats(session["user_id"])
@@ -320,6 +322,7 @@ def dashboard():
         airports=airports,
         cabin_crew_groups=cabin_crew_groups,
         cabin_crews=cabin_crews,
+        cancelled_flights=cancelled_flights,
         cancellation_requests=cancellation_requests,
         flights=flights,
         pilots=pilots,

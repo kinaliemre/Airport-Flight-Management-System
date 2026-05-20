@@ -210,8 +210,6 @@ def create_pilot_cancellation_request(flight_id):
 
     if request_id is not None:
         flash("İptal talebiniz kaydedildi.", "success")
-    elif error == "late":
-        flash("Kalkışa 24 saatten az kaldığı için iptal talebi gönderilemez.", "error")
     else:
         flash("İptal talebi kaydedilemedi.", "error")
 
