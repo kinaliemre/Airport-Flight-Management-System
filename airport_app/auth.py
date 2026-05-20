@@ -4,9 +4,11 @@ from .db import (
     create_admin,
     create_cancellation_request,
     create_pilot,
+    get_cabin_crew_by_user_id,
     get_pilot_by_user_id,
     get_user_for_login,
     list_cancellation_requests_for_pilot,
+    list_flights_for_cabin_crew,
     list_flights_for_pilot,
     verify_user_password,
 )
@@ -48,6 +50,14 @@ FORM_CONFIG = {
         "mode": "register",
         "role": "pilot",
     },
+    "cabin_crew_login": {
+        "title": "Kabin GÃ¶revlisi GiriÅŸi",
+        "description": "AtandÄ±ÄŸÄ±nÄ±z uÃ§uÅŸ ve uÃ§ak bilgilerini gÃ¶rmek iÃ§in giriÅŸ yapÄ±n.",
+        "button": "Kabin gÃ¶revlisi giriÅŸi yap",
+        "fields": ("username", "password"),
+        "mode": "login",
+        "role": "cabin_crew",
+    },
 }
 
 
@@ -74,6 +84,11 @@ def pilot_login():
 @auth_bp.route("/pilot/register", methods=["GET", "POST"])
 def pilot_register():
     return render_auth_form("pilot_register")
+
+
+@auth_bp.route("/cabin-crew/login", methods=["GET", "POST"])
+def cabin_crew_login():
+    return render_auth_form("cabin_crew_login")
 
 
 def render_auth_form(form_type):
@@ -125,11 +140,30 @@ def render_auth_form(form_type):
 
                 if user["role"] == "admin":
                     return redirect(url_for("admin.dashboard"))
+                if user["role"] == "cabin_crew":
+                    return redirect(url_for("auth.cabin_crew_dashboard"))
 
                 return redirect(url_for("auth.pilot_dashboard"))
 
     return render_template(
         "auth/form.html", config=config, error=error, form_data=form_data
+    )
+
+
+@auth_bp.route("/cabin-crew/dashboard")
+def cabin_crew_dashboard():
+    if session.get("role") != "cabin_crew":
+        flash("Kabin gÃ¶revlisi paneline eriÅŸmek iÃ§in giriÅŸ yapmalÄ±sÄ±nÄ±z.", "error")
+        return redirect(url_for("auth.cabin_crew_login"))
+
+    cabin_crew = get_cabin_crew_by_user_id(session["user_id"])
+    flights = (
+        list_flights_for_cabin_crew(cabin_crew["cabin_crew_id"]) if cabin_crew else []
+    )
+    return render_template(
+        "cabin_crew/dashboard.html",
+        user=cabin_crew,
+        flights=flights,
     )
 
 

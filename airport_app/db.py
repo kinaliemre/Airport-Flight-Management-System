@@ -40,7 +40,7 @@ def init_db():
                 full_name TEXT NOT NULL,
                 username TEXT NOT NULL UNIQUE,
                 password_hash TEXT NOT NULL,
-                role TEXT NOT NULL CHECK (role IN ('admin', 'pilot')),
+                role TEXT NOT NULL CHECK (role IN ('admin', 'pilot', 'cabin_crew')),
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -115,12 +115,14 @@ def init_db():
             CREATE TABLE IF NOT EXISTS cabin_crews (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL,
+                account_user_id INTEGER UNIQUE,
                 full_name TEXT NOT NULL,
                 duty TEXT NOT NULL,
                 phone TEXT,
                 is_active INTEGER NOT NULL DEFAULT 1,
                 created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (account_user_id) REFERENCES users (id) ON DELETE CASCADE
             );
 
             CREATE TABLE IF NOT EXISTS flight_cabin_crews (
@@ -128,6 +130,23 @@ def init_db():
                 cabin_crew_id INTEGER NOT NULL,
                 PRIMARY KEY (flight_id, cabin_crew_id),
                 FOREIGN KEY (flight_id) REFERENCES flights (id) ON DELETE CASCADE,
+                FOREIGN KEY (cabin_crew_id) REFERENCES cabin_crews (id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS cabin_crew_groups (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                lead_cabin_crew_id INTEGER NOT NULL,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+                FOREIGN KEY (lead_cabin_crew_id) REFERENCES cabin_crews (id) ON DELETE CASCADE
+            );
+
+            CREATE TABLE IF NOT EXISTS cabin_crew_group_members (
+                group_id INTEGER NOT NULL,
+                cabin_crew_id INTEGER NOT NULL,
+                PRIMARY KEY (group_id, cabin_crew_id),
+                FOREIGN KEY (group_id) REFERENCES cabin_crew_groups (id) ON DELETE CASCADE,
                 FOREIGN KEY (cabin_crew_id) REFERENCES cabin_crews (id) ON DELETE CASCADE
             );
 
@@ -159,12 +178,77 @@ def init_db():
 
 
 def ensure_schema_updates(db):
+    users_table = db.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'users'"
+    ).fetchone()
+    if users_table is not None and "'cabin_crew'" not in users_table["sql"]:
+        db.execute("PRAGMA foreign_keys = OFF")
+        db.execute(
+            """
+            CREATE TABLE users_new (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                full_name TEXT NOT NULL,
+                username TEXT NOT NULL UNIQUE,
+                password_hash TEXT NOT NULL,
+                role TEXT NOT NULL CHECK (role IN ('admin', 'pilot', 'cabin_crew')),
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+            )
+            """
+        )
+        db.execute(
+            """
+            INSERT INTO users_new (id, full_name, username, password_hash, role, created_at)
+            SELECT id, full_name, username, password_hash, role, created_at
+            FROM users
+            """
+        )
+        db.execute("DROP TABLE users")
+        db.execute("ALTER TABLE users_new RENAME TO users")
+        db.execute("PRAGMA foreign_keys = ON")
+        db.commit()
+
     pilot_columns = {
         row["name"] for row in db.execute("PRAGMA table_info(pilots)").fetchall()
     }
     if "owner_user_id" not in pilot_columns:
         db.execute("ALTER TABLE pilots ADD COLUMN owner_user_id INTEGER")
         db.commit()
+
+    cabin_crew_columns = {
+        row["name"] for row in db.execute("PRAGMA table_info(cabin_crews)").fetchall()
+    }
+    if "account_user_id" not in cabin_crew_columns:
+        db.execute("ALTER TABLE cabin_crews ADD COLUMN account_user_id INTEGER")
+        db.commit()
+    db.execute(
+        """
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_cabin_crews_account_user_id
+        ON cabin_crews (account_user_id)
+        WHERE account_user_id IS NOT NULL
+        """
+    )
+    db.commit()
+    db.executescript(
+        """
+        CREATE TABLE IF NOT EXISTS cabin_crew_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            lead_cabin_crew_id INTEGER NOT NULL,
+            created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+            FOREIGN KEY (lead_cabin_crew_id) REFERENCES cabin_crews (id) ON DELETE CASCADE
+        );
+
+        CREATE TABLE IF NOT EXISTS cabin_crew_group_members (
+            group_id INTEGER NOT NULL,
+            cabin_crew_id INTEGER NOT NULL,
+            PRIMARY KEY (group_id, cabin_crew_id),
+            FOREIGN KEY (group_id) REFERENCES cabin_crew_groups (id) ON DELETE CASCADE,
+            FOREIGN KEY (cabin_crew_id) REFERENCES cabin_crews (id) ON DELETE CASCADE
+        );
+        """
+    )
+    db.commit()
 
 
 @command("init-db")
@@ -221,6 +305,33 @@ def create_pilot(full_name, username, password, rank, owner_user_id=None):
         rank=rank,
         owner_user_id=owner_user_id,
     )
+
+
+def create_cabin_crew_account(
+    owner_user_id, full_name, username, password, duty, phone=None
+):
+    db = get_db()
+
+    try:
+        cursor = db.execute(
+            """
+            INSERT INTO users (full_name, username, password_hash, role)
+            VALUES (?, ?, ?, 'cabin_crew')
+            """,
+            (full_name, username, generate_password_hash(password)),
+        )
+        db.execute(
+            """
+            INSERT INTO cabin_crews (user_id, account_user_id, full_name, duty, phone)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (owner_user_id, cursor.lastrowid, full_name, duty, phone),
+        )
+        db.commit()
+        return cursor.lastrowid
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return None
 
 
 def get_user_by_id(user_id):
@@ -646,6 +757,72 @@ def find_schedule_conflict(
     return None
 
 
+def find_cabin_crew_schedule_conflict(
+    user_id,
+    cabin_crew_ids,
+    departure_time,
+    arrival_time,
+    exclude_flight_id=None,
+):
+    if not cabin_crew_ids:
+        return None
+
+    placeholders = ",".join("?" for _ in cabin_crew_ids)
+    params = (
+        user_id,
+        arrival_time,
+        departure_time,
+        exclude_flight_id,
+        exclude_flight_id,
+        *cabin_crew_ids,
+    )
+    return get_db().execute(
+        f"""
+        SELECT flights.flight_number, flights.departure_time, flights.arrival_time,
+               cabin_crews.full_name
+        FROM flights
+        JOIN flight_cabin_crews ON flight_cabin_crews.flight_id = flights.id
+        JOIN cabin_crews ON cabin_crews.id = flight_cabin_crews.cabin_crew_id
+        WHERE flights.user_id = ?
+            AND flights.status != 'cancelled'
+            AND flights.departure_time < ?
+            AND flights.arrival_time > ?
+            AND (? IS NULL OR flights.id != ?)
+            AND flight_cabin_crews.cabin_crew_id IN ({placeholders})
+        ORDER BY flights.departure_time
+        LIMIT 1
+        """,
+        params,
+    ).fetchone()
+
+
+def replace_flight_cabin_crew_group(db, user_id, flight_id, cabin_crew_ids):
+    if len(cabin_crew_ids) != 3 or len(set(cabin_crew_ids)) != 3:
+        return False
+
+    placeholders = ",".join("?" for _ in cabin_crew_ids)
+    valid_count = db.execute(
+        f"""
+        SELECT COUNT(*) AS count
+        FROM cabin_crews
+        WHERE user_id = ? AND is_active = 1 AND id IN ({placeholders})
+        """,
+        (user_id, *cabin_crew_ids),
+    ).fetchone()["count"]
+    if valid_count != 3:
+        return False
+
+    db.execute("DELETE FROM flight_cabin_crews WHERE flight_id = ?", (flight_id,))
+    db.executemany(
+        """
+        INSERT INTO flight_cabin_crews (flight_id, cabin_crew_id)
+        VALUES (?, ?)
+        """,
+        [(flight_id, cabin_crew_id) for cabin_crew_id in cabin_crew_ids],
+    )
+    return True
+
+
 def create_flight(
     user_id,
     flight_number,
@@ -655,6 +832,7 @@ def create_flight(
     departure_time,
     arrival_time,
     status="scheduled",
+    cabin_crew_ids=None,
 ):
     db = get_db()
 
@@ -668,6 +846,14 @@ def create_flight(
         user_id, pilot_id, aircraft_id, departure_time, arrival_time
     ):
         return None
+
+    if cabin_crew_ids is not None:
+        if len(cabin_crew_ids) != 3 or len(set(cabin_crew_ids)) != 3:
+            return None
+        if status != "cancelled" and find_cabin_crew_schedule_conflict(
+            user_id, cabin_crew_ids, departure_time, arrival_time
+        ):
+            return None
 
     try:
         cursor = db.execute(
@@ -695,6 +881,11 @@ def create_flight(
                 status,
             ),
         )
+        if cabin_crew_ids is not None and not replace_flight_cabin_crew_group(
+            db, user_id, cursor.lastrowid, cabin_crew_ids
+        ):
+            db.rollback()
+            return None
         db.commit()
         return cursor.lastrowid
     except sqlite3.IntegrityError:
@@ -722,7 +913,8 @@ def list_flights(user_id):
             departure.iata_code AS departure_iata,
             destination.city AS destination_city,
             destination.iata_code AS destination_iata,
-            COALESCE(GROUP_CONCAT(cabin_crews.full_name, ', '), '') AS cabin_crew_names
+            COALESCE(GROUP_CONCAT(cabin_crews.full_name, ', '), '') AS cabin_crew_names,
+            COALESCE(GROUP_CONCAT(cabin_crews.id, ','), '') AS cabin_crew_ids
         FROM flights
         JOIN pilots ON pilots.id = flights.pilot_id
         JOIN users AS pilot_user ON pilot_user.id = pilots.user_id
@@ -792,6 +984,50 @@ def create_cabin_crew(user_id, full_name, duty, phone=None):
         return None
 
 
+def create_cabin_crew_group(user_id, members, lead_index):
+    if len(members) != 3 or lead_index not in {0, 1, 2}:
+        return None
+
+    db = get_db()
+    try:
+        cabin_crew_ids = []
+        for member in members:
+            cursor = db.execute(
+                """
+                INSERT INTO cabin_crews (user_id, full_name, duty, phone)
+                VALUES (?, ?, ?, ?)
+                """,
+                (
+                    user_id,
+                    member["full_name"],
+                    member["duty"],
+                    member.get("phone"),
+                ),
+            )
+            cabin_crew_ids.append(cursor.lastrowid)
+
+        group_cursor = db.execute(
+            """
+            INSERT INTO cabin_crew_groups (user_id, lead_cabin_crew_id)
+            VALUES (?, ?)
+            """,
+            (user_id, cabin_crew_ids[lead_index]),
+        )
+        group_id = group_cursor.lastrowid
+        db.executemany(
+            """
+            INSERT INTO cabin_crew_group_members (group_id, cabin_crew_id)
+            VALUES (?, ?)
+            """,
+            [(group_id, cabin_crew_id) for cabin_crew_id in cabin_crew_ids],
+        )
+        db.commit()
+        return group_id
+    except sqlite3.IntegrityError:
+        db.rollback()
+        return None
+
+
 def get_cabin_crew_by_id(cabin_crew_id, user_id):
     return get_db().execute(
         """
@@ -806,12 +1042,119 @@ def get_cabin_crew_by_id(cabin_crew_id, user_id):
 def list_cabin_crews(user_id):
     return get_db().execute(
         """
-        SELECT id, full_name, duty, phone, is_active, created_at
+        SELECT id, account_user_id, full_name, duty, phone, is_active, created_at
         FROM cabin_crews
         WHERE user_id = ?
         ORDER BY full_name
         """,
         (user_id,),
+    ).fetchall()
+
+
+def list_cabin_crew_groups(user_id):
+    return get_db().execute(
+        """
+        SELECT
+            cabin_crew_groups.id,
+            cabin_crew_groups.lead_cabin_crew_id,
+            lead.full_name AS lead_name,
+            lead.duty AS lead_duty,
+            GROUP_CONCAT(member.full_name || '|' || member.duty || '|' || COALESCE(member.phone, ''), ';;') AS members
+        FROM cabin_crew_groups
+        JOIN cabin_crews AS lead ON lead.id = cabin_crew_groups.lead_cabin_crew_id
+        JOIN cabin_crew_group_members ON cabin_crew_group_members.group_id = cabin_crew_groups.id
+        JOIN cabin_crews AS member ON member.id = cabin_crew_group_members.cabin_crew_id
+        WHERE cabin_crew_groups.user_id = ?
+        GROUP BY cabin_crew_groups.id
+        ORDER BY lead.full_name
+        """,
+        (user_id,),
+    ).fetchall()
+
+
+def get_cabin_crew_group_member_ids(user_id, group_id):
+    group = get_db().execute(
+        """
+        SELECT id
+        FROM cabin_crew_groups
+        WHERE id = ? AND user_id = ?
+        """,
+        (group_id, user_id),
+    ).fetchone()
+    if group is None:
+        return []
+
+    return [
+        row["cabin_crew_id"]
+        for row in get_db()
+        .execute(
+            """
+            SELECT cabin_crew_id
+            FROM cabin_crew_group_members
+            WHERE group_id = ?
+            ORDER BY cabin_crew_id
+            """,
+            (group_id,),
+        )
+        .fetchall()
+    ]
+
+
+def get_cabin_crew_by_user_id(user_id):
+    return get_db().execute(
+        """
+        SELECT
+            cabin_crews.id AS cabin_crew_id,
+            cabin_crews.user_id AS owner_user_id,
+            cabin_crews.duty,
+            cabin_crews.phone,
+            cabin_crews.is_active,
+            users.id AS user_id,
+            users.full_name,
+            users.username,
+            users.created_at
+        FROM cabin_crews
+        JOIN users ON users.id = cabin_crews.account_user_id
+        WHERE cabin_crews.account_user_id = ?
+        """,
+        (user_id,),
+    ).fetchone()
+
+
+def list_flights_for_cabin_crew(cabin_crew_id):
+    return get_db().execute(
+        """
+        SELECT
+            flights.id,
+            flights.flight_number,
+            flights.departure_time,
+            flights.arrival_time,
+            flights.status,
+            pilot_user.full_name AS pilot_name,
+            aircrafts.name AS aircraft_name,
+            aircrafts.model AS aircraft_model,
+            aircrafts.capacity AS aircraft_capacity,
+            departure.name AS departure_airport,
+            departure.city AS departure_city,
+            departure.country AS departure_country,
+            departure.iata_code AS departure_iata,
+            destination.name AS destination_airport,
+            destination.city AS destination_city,
+            destination.country AS destination_country,
+            destination.iata_code AS destination_iata,
+            routes.estimated_duration_minutes
+        FROM flight_cabin_crews
+        JOIN flights ON flights.id = flight_cabin_crews.flight_id
+        JOIN pilots ON pilots.id = flights.pilot_id
+        JOIN users AS pilot_user ON pilot_user.id = pilots.user_id
+        JOIN aircrafts ON aircrafts.id = flights.aircraft_id
+        JOIN routes ON routes.id = flights.route_id
+        JOIN airports AS departure ON departure.id = routes.departure_airport_id
+        JOIN airports AS destination ON destination.id = routes.destination_airport_id
+        WHERE flight_cabin_crews.cabin_crew_id = ?
+        ORDER BY flights.departure_time
+        """,
+        (cabin_crew_id,),
     ).fetchall()
 
 
@@ -986,6 +1329,7 @@ def update_flight(
     departure_time,
     arrival_time,
     status,
+    cabin_crew_ids=None,
 ):
     db = get_db()
     flight = get_flight_by_id(flight_id, user_id)
@@ -999,6 +1343,14 @@ def update_flight(
         user_id, pilot_id, aircraft_id, departure_time, arrival_time, flight_id
     ):
         return False
+
+    if cabin_crew_ids is not None:
+        if len(cabin_crew_ids) != 3 or len(set(cabin_crew_ids)) != 3:
+            return False
+        if status != "cancelled" and find_cabin_crew_schedule_conflict(
+            user_id, cabin_crew_ids, departure_time, arrival_time, flight_id
+        ):
+            return False
 
     try:
         db.execute(
@@ -1025,6 +1377,11 @@ def update_flight(
                 user_id,
             ),
         )
+        if cabin_crew_ids is not None and not replace_flight_cabin_crew_group(
+            db, user_id, flight_id, cabin_crew_ids
+        ):
+            db.rollback()
+            return False
         db.commit()
         return True
     except sqlite3.IntegrityError:

@@ -4,14 +4,18 @@ from .db import (
     cancel_flight,
     create_aircraft,
     create_airport,
+    create_cabin_crew_group,
     create_flight,
     create_pilot,
     create_route,
     delete_aircraft,
+    find_cabin_crew_schedule_conflict,
     find_schedule_conflict,
     get_admin_dashboard_stats,
+    get_cabin_crew_group_member_ids,
     list_aircrafts,
     list_airports,
+    list_cabin_crew_groups,
     list_cabin_crews,
     list_cancellation_requests,
     list_flights,
@@ -303,6 +307,7 @@ def dashboard():
     aircrafts = list_aircrafts(session["user_id"])
     airports = list_airports(session["user_id"])
     cabin_crews = list_cabin_crews(session["user_id"])
+    cabin_crew_groups = list_cabin_crew_groups(session["user_id"])
     routes = list_routes(session["user_id"])
     flights = list_flights(session["user_id"])
     pilots = list_pilots(session["user_id"])
@@ -313,6 +318,7 @@ def dashboard():
         aircrafts=aircrafts,
         airport_options=AIRPORT_OPTIONS,
         airports=airports,
+        cabin_crew_groups=cabin_crew_groups,
         cabin_crews=cabin_crews,
         cancellation_requests=cancellation_requests,
         flights=flights,
@@ -517,6 +523,40 @@ def add_pilot():
     return redirect(url_for("admin.dashboard"))
 
 
+@admin_bp.route("/cabin-crews", methods=["POST"])
+def add_cabin_crew():
+    auth_redirect = require_admin()
+    if auth_redirect is not None:
+        return auth_redirect
+
+    members = []
+    for index in range(1, 4):
+        members.append(
+            {
+                "full_name": request.form.get(f"member_{index}_full_name", "").strip(),
+                "duty": request.form.get(f"member_{index}_duty", "").strip(),
+                "phone": request.form.get(f"member_{index}_phone", "").strip() or None,
+            }
+        )
+
+    try:
+        lead_index = int(request.form.get("lead_index", "1")) - 1
+    except ValueError:
+        lead_index = -1
+
+    if any(not member["full_name"] or not member["duty"] for member in members):
+        flash("Kabin gÃ¶revlisi eklemek iÃ§in zorunlu alanlarÄ± doldurun.", "error")
+        return redirect(url_for("admin.dashboard"))
+
+    group_id = create_cabin_crew_group(session["user_id"], members, lead_index)
+    if group_id is None:
+        flash("Bu kullanÄ±cÄ± adÄ± zaten kayÄ±tlÄ±.", "error")
+    else:
+        flash("Kabin gÃ¶revlisi baÅŸarÄ±yla eklendi.", "success")
+
+    return redirect(url_for("admin.dashboard"))
+
+
 @admin_bp.route("/pilots/<int:pilot_id>", methods=["POST"])
 def edit_pilot(pilot_id):
     auth_redirect = require_admin()
@@ -539,7 +579,7 @@ def edit_pilot(pilot_id):
     return redirect(url_for("admin.dashboard"))
 
 
-def read_flight_form():
+def read_flight_form(require_cabin_group=True):
     form_data = {
         "flight_number": request.form.get("flight_number", "").strip(),
         "route_id": request.form.get("route_id", "").strip(),
@@ -557,8 +597,20 @@ def read_flight_form():
         form_data["route_id"] = int(form_data["route_id"])
         form_data["pilot_id"] = int(form_data["pilot_id"])
         form_data["aircraft_id"] = int(form_data["aircraft_id"])
+        cabin_crew_group_id = request.form.get("cabin_crew_group_id", "").strip()
+        if cabin_crew_group_id:
+            form_data["cabin_crew_ids"] = get_cabin_crew_group_member_ids(
+                session["user_id"], int(cabin_crew_group_id)
+            )
+        else:
+            form_data["cabin_crew_ids"] = None
     except ValueError:
         return None, "Uçuş için rota, pilot ve uçak seçimi geçersiz."
+
+    if require_cabin_group and (
+        form_data["cabin_crew_ids"] is None or len(form_data["cabin_crew_ids"]) != 3
+    ):
+        return None, "Ucus icin 3 kisilik bir kabin ekibi secin."
 
     if form_data["departure_time"] >= form_data["arrival_time"]:
         return None, "Varış zamanı kalkış zamanından sonra olmalıdır."
@@ -582,7 +634,25 @@ def get_schedule_conflict_error(form_data, flight_id=None):
         exclude_flight_id=flight_id,
     )
     if conflict is None:
-        return None
+        if not form_data.get("cabin_crew_ids"):
+            return None
+
+        cabin_crew_conflict = find_cabin_crew_schedule_conflict(
+            user_id=session["user_id"],
+            cabin_crew_ids=form_data["cabin_crew_ids"],
+            departure_time=form_data["departure_time"],
+            arrival_time=form_data["arrival_time"],
+            exclude_flight_id=flight_id,
+        )
+        if cabin_crew_conflict is None:
+            return None
+
+        return (
+            f"Kabin ekibi cakismasi: {cabin_crew_conflict['full_name']} "
+            f"{cabin_crew_conflict['flight_number']} ucusunda "
+            f"({cabin_crew_conflict['departure_time']} - "
+            f"{cabin_crew_conflict['arrival_time']})"
+        )
 
     resource_label = "Pilot" if conflict["type"] == "pilot" else "Uçak"
     return (
@@ -597,7 +667,7 @@ def add_flight():
     if auth_redirect is not None:
         return auth_redirect
 
-    form_data, error = read_flight_form()
+    form_data, error = read_flight_form(require_cabin_group=True)
     if error is not None:
         flash(error, "error")
         return redirect(url_for("admin.dashboard"))
@@ -622,7 +692,7 @@ def edit_flight(flight_id):
     if auth_redirect is not None:
         return auth_redirect
 
-    form_data, error = read_flight_form()
+    form_data, error = read_flight_form(require_cabin_group=False)
     if error is not None:
         flash(error, "error")
         return redirect(url_for("admin.dashboard"))
