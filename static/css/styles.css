@@ -568,6 +568,11 @@ h1 {
   align-items: start;
 }
 
+.cancelled-flight-row {
+  grid-template-columns: 0.7fr 1fr 1.2fr 1fr 1fr;
+  align-items: start;
+}
+
 .data-row span {
   display: block;
   color: var(--muted);
@@ -621,6 +626,7 @@ h1 {
   .pilot-flight-row,
   .cabin-flight-row,
   .cancellation-request-row,
+  .cancelled-flight-row,
   .flight-row,
   .crew-row,
   .data-row {

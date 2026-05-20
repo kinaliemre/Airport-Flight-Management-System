@@ -252,7 +252,7 @@
     </div>
 
     <div class="table-section">
-      <div class="section-heading"><h2>Uçuş Listesi</h2><span>{{ stats.flight_count }} kayıt</span></div>
+      <div class="section-heading"><h2>Uçuş Listesi</h2><span>{{ flights|length }} kayıt</span></div>
       {% if flights %}
         <div class="data-list">
           {% for flight in flights %}
@@ -302,6 +302,25 @@
         </div>
       {% else %}
         <p class="empty-state">Henüz kayıtlı uçuş yok.</p>
+      {% endif %}
+    </div>
+
+    <div class="table-section">
+      <div class="section-heading"><h2>İptal Edilen Uçaklar</h2><span>{{ cancelled_flights|length }} kayıt</span></div>
+      {% if cancelled_flights %}
+        <div class="data-list">
+          {% for flight in cancelled_flights %}
+            <article class="data-row cancelled-flight-row">
+              <div><span>Uçuş no</span><strong>{{ flight.flight_number }}</strong></div>
+              <div><span>Uçak</span><strong>{{ flight.aircraft_name }}</strong><span>{{ flight.aircraft_model }}</span></div>
+              <div><span>Rota</span><strong>{{ flight.departure_iata }} - {{ flight.destination_iata }}</strong><span>{{ flight.departure_city }} - {{ flight.destination_city }}</span></div>
+              <div><span>Pilot</span><strong>{{ flight.pilot_name }}</strong></div>
+              <div><span>Zaman</span><strong>{{ flight.departure_time }}</strong><span>{{ flight.arrival_time }}</span></div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty-state">Henüz iptal edilen uçuş yok.</p>
       {% endif %}
     </div>
 
