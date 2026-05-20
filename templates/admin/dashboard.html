@@ -112,8 +112,24 @@
     </div>
 
     <div class="table-section">
+      <div class="section-heading"><h2>Kabin Ekibi Olustur</h2></div>
+      <form class="management-form cabin-crew-group-form" method="post" action="{{ url_for('admin.add_cabin_crew') }}">
+        {% for index in range(1, 4) %}
+          <fieldset class="crew-member-fieldset">
+            <legend>{{ index }}. kisi</legend>
+            <label>Ad soyad<input name="member_{{ index }}_full_name" type="text" placeholder="Elif Demir" required></label>
+            <label>Gorev<input name="member_{{ index }}_duty" type="text" value="{{ 'Bas memur' if index == 1 else 'Kabin memuru' }}" required></label>
+            <label>Telefon<input name="member_{{ index }}_phone" type="tel" placeholder="0555 000 00 00"></label>
+            <label class="radio-label"><input name="lead_index" type="radio" value="{{ index }}" {% if index == 1 %}checked{% endif %}> Bas memur</label>
+          </fieldset>
+        {% endfor %}
+        <button type="submit">Ekibi kaydet</button>
+      </form>
+    </div>
+
+    <div class="table-section">
       <div class="section-heading"><h2>Uçuş Oluştur</h2></div>
-      {% if routes and pilots and aircrafts %}
+      {% if routes and pilots and aircrafts and cabin_crew_groups %}
         <form class="management-form flight-form" method="post" action="{{ url_for('admin.add_flight') }}">
           <label>Uçuş no<input name="flight_number" type="text" placeholder="TK1001" required></label>
           <label>
@@ -142,6 +158,14 @@
           </label>
           <label>Kalkış<input name="departure_time" type="datetime-local" required></label>
           <label>Varış<input name="arrival_time" type="datetime-local" required></label>
+          <label>
+            Kabin ekibi
+            <select name="cabin_crew_group_id" required>
+              {% for group in cabin_crew_groups %}
+                <option value="{{ group.id }}">{{ group.lead_name }} bas memur</option>
+              {% endfor %}
+            </select>
+          </label>
           <label>
             Durum
             <select name="status" required>
@@ -334,14 +358,25 @@
 
     <div class="table-section">
       <div class="section-heading"><h2>Kabin Ekibi</h2><span>{{ cabin_crews|length }} kayıt</span></div>
-      {% if cabin_crews %}
+      {% if cabin_crew_groups %}
         <div class="data-list">
-          {% for crew in cabin_crews %}
-            <article class="data-row crew-row">
-              <div><strong>{{ crew.full_name }}</strong><span>{{ crew.duty }}</span></div>
-              <div><span>Telefon</span><strong>{{ crew.phone or "-" }}</strong></div>
-              <div><span>Durum</span><strong>{{ "Aktif" if crew.is_active else "Pasif" }}</strong></div>
-            </article>
+          {% for group in cabin_crew_groups %}
+            <details class="crew-group-row">
+              <summary>
+                <strong>{{ group.lead_name }}</strong>
+                <span>Bas memur</span>
+              </summary>
+              <div class="crew-group-members">
+                {% for member_data in group.members.split(';;') %}
+                  {% set member = member_data.split('|') %}
+                  <div>
+                    <strong>{{ member[0] }}</strong>
+                    <span>{{ member[1] }}</span>
+                    <span>{{ member[2] or "-" }}</span>
+                  </div>
+                {% endfor %}
+              </div>
+            </details>
           {% endfor %}
         </div>
       {% else %}

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Kabin Gorevlisi Paneli{% endblock %}
+
+{% block content %}
+<main class="dashboard-page">
+  <section class="dashboard-shell" aria-labelledby="cabin-crew-dashboard-title">
+    <div>
+      <p class="eyebrow">Kabin Gorevlisi</p>
+      <h1 id="cabin-crew-dashboard-title">Hos geldiniz, {{ user.full_name }}</h1>
+      <p class="muted">Atandiginiz ucuslari ve ucak bilgilerini buradan takip edin.</p>
+    </div>
+
+    <div class="summary-grid">
+      <article class="summary-card">
+        <span>Gorev</span>
+        <strong>{{ user.duty }}</strong>
+      </article>
+      <article class="summary-card">
+        <span>Kullanici adi</span>
+        <strong>{{ user.username }}</strong>
+      </article>
+    </div>
+
+    <div class="table-section">
+      <div class="section-heading">
+        <h2>Atanan Ucuslar</h2>
+        <span>{{ flights|length }} kayit</span>
+      </div>
+
+      {% if flights %}
+        <div class="data-list">
+          {% for flight in flights %}
+            <article class="data-row cabin-flight-row">
+              <div>
+                <strong>{{ flight.flight_number }}</strong>
+                <span>{{ flight.status }}</span>
+              </div>
+              <div>
+                <span>Kalkis</span>
+                <strong>{{ flight.departure_iata }} - {{ flight.departure_airport }}</strong>
+                <span>{{ flight.departure_city }}, {{ flight.departure_country }}</span>
+              </div>
+              <div>
+                <span>Varis</span>
+                <strong>{{ flight.destination_iata }} - {{ flight.destination_airport }}</strong>
+                <span>{{ flight.destination_city }}, {{ flight.destination_country }}</span>
+              </div>
+              <div>
+                <span>Ucak</span>
+                <strong>{{ flight.aircraft_name }}</strong>
+                <span>{{ flight.aircraft_model }} / {{ flight.aircraft_capacity }} koltuk</span>
+              </div>
+              <div>
+                <span>Pilot</span>
+                <strong>{{ flight.pilot_name }}</strong>
+              </div>
+              <div>
+                <span>Zaman</span>
+                <strong>{{ flight.departure_time }}</strong>
+                <span>{{ flight.arrival_time }} / {{ flight.estimated_duration_minutes }} dk</span>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="empty-state">Henuz size atanmis ucus yok.</p>
+      {% endif %}
+    </div>
+
+    <a class="secondary-button" href="{{ url_for('auth.logout') }}">Cikis yap</a>
+  </section>
+</main>
+{% endblock %}

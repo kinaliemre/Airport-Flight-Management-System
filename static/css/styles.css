@@ -132,7 +132,12 @@ h1 {
 }
 
 .flight-form {
-  grid-template-columns: 0.8fr 1fr 1.2fr 1.2fr 1fr 1fr 0.9fr auto;
+  grid-template-columns: 0.8fr 1fr 1.2fr 1.2fr 1.3fr 1fr 1fr 0.9fr auto;
+}
+
+.cabin-crew-group-form {
+  grid-template-columns: repeat(3, minmax(0, 1fr)) auto;
+  align-items: stretch;
 }
 
 .airport-form {
@@ -155,6 +160,32 @@ h1 {
   color: var(--muted);
   font-size: 13px;
   font-weight: 700;
+}
+
+.crew-member-fieldset {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.crew-member-fieldset legend {
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 6px;
+}
+
+.radio-label {
+  display: flex !important;
+  grid-template-columns: none !important;
+  align-items: center;
+}
+
+.radio-label input {
+  width: auto;
 }
 
 .pilot-row label,
@@ -187,6 +218,11 @@ h1 {
   padding: 12px;
   color: var(--text);
   font: inherit;
+}
+
+.management-form select[multiple],
+.flight-edit-row select[multiple] {
+  min-height: 112px;
 }
 
 .auth-form input:focus,
@@ -457,6 +493,42 @@ h1 {
   grid-template-columns: 1.4fr 1fr 0.6fr;
 }
 
+.crew-group-row {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fbfcfe;
+  padding: 14px;
+}
+
+.crew-group-row summary {
+  display: flex;
+  cursor: pointer;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.crew-group-row summary span,
+.crew-group-members span {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.crew-group-members {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.crew-group-members div {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+
 .aircraft-row {
   grid-template-columns: 1.2fr 0.7fr 0.8fr 1fr;
 }
@@ -483,6 +555,11 @@ h1 {
 
 .pilot-flight-row {
   grid-template-columns: 0.7fr 1.3fr 1.3fr 1fr 0.8fr 0.8fr 1.2fr;
+  align-items: start;
+}
+
+.cabin-flight-row {
+  grid-template-columns: 0.7fr 1.3fr 1.3fr 1fr 0.8fr 1fr;
   align-items: start;
 }
 
@@ -534,6 +611,7 @@ h1 {
   .flight-form,
   .airport-form,
   .route-form,
+  .cabin-crew-group-form,
   .aircraft-row,
   .aircraft-management-row,
   .airport-row,
@@ -541,10 +619,15 @@ h1 {
   .pilot-row,
   .flight-edit-row,
   .pilot-flight-row,
+  .cabin-flight-row,
   .cancellation-request-row,
   .flight-row,
   .crew-row,
   .data-row {
+    grid-template-columns: 1fr;
+  }
+
+  .crew-group-members div {
     grid-template-columns: 1fr;
   }
 
