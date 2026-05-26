@@ -7,6 +7,9 @@
   --line: #d9e0ea;
   --primary: #0f6b74;
   --primary-hover: #0a555c;
+  --heading-cyan: #008fa3;
+  --action-accent: #001F3F;
+  --action-accent-hover: #00162d;
   --accent: #d98b22;
   --danger-bg: #fff1f1;
   --danger-text: #a52424;
@@ -315,6 +318,7 @@ h1 {
 
 .danger-button {
   background: var(--danger-text) !important;
+  box-shadow: 0 8px 18px rgba(165, 36, 36, 0.22) !important;
 }
 
 .danger-button:hover {
@@ -322,7 +326,6 @@ h1 {
 }
 
 .auth-form button:hover,
-.management-form button:hover,
 .pilot-row button:hover,
 .airport-row button:hover,
 .route-row button:hover,
@@ -330,6 +333,30 @@ h1 {
 .flight-edit-row button:hover,
 .cancellation-request-row button:hover {
   background: var(--primary-hover);
+}
+
+.management-form button,
+.pilot-row button,
+.airport-row button,
+.route-row button,
+.aircraft-management-row button,
+.flight-edit-row button,
+.cancellation-request-row button {
+  background: var(--action-accent);
+  box-shadow: 0 8px 18px rgba(0, 31, 63, 0.26);
+}
+
+.management-form button:hover {
+  background: var(--action-accent-hover);
+}
+
+.pilot-row button:hover,
+.airport-row button:hover,
+.route-row button:hover,
+.aircraft-management-row button:hover,
+.flight-edit-row button:hover,
+.cancellation-request-row button:hover {
+  background: var(--action-accent-hover);
 }
 
 .auth-options {
@@ -452,7 +479,9 @@ h1 {
 
 .section-heading h2 {
   margin: 0;
-  font-size: 20px;
+  color: var(--heading-cyan);
+  font-size: 24px;
+  font-weight: 900;
 }
 
 .section-heading span {
