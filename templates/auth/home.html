@@ -17,6 +17,14 @@
       <a class="option-button" href="{{ url_for('auth.pilot_login') }}">Pilot Giriş</a>
       <a class="option-button" href="{{ url_for('auth.pilot_register') }}">Pilot Kayıt</a>
     </div>
+
+    <div class="language-actions" aria-label="Dil seçimi">
+      {% if current_lang == "en" %}
+        <a class="language-button" href="{{ url_for('auth.set_language', language='tr') }}" aria-label="Dili Türkçe yap">Türkçe</a>
+      {% else %}
+        <a class="language-button" href="{{ url_for('auth.set_language', language='en') }}" aria-label="Dili İngilizce yap">English</a>
+      {% endif %}
+    </div>
   </section>
 </main>
 {% endblock %}

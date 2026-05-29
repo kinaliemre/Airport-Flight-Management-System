@@ -12,6 +12,7 @@ from .db import (
     list_flights_for_pilot,
     verify_user_password,
 )
+from .i18n import DEFAULT_LANGUAGE, normalize_language
 
 
 auth_bp = Blueprint("auth", __name__)
@@ -64,6 +65,12 @@ FORM_CONFIG = {
 @auth_bp.route("/")
 def auth_home():
     return render_template("auth/home.html")
+
+
+@auth_bp.route("/language/<language>")
+def set_language(language):
+    session["language"] = normalize_language(language)
+    return redirect(request.referrer or url_for("auth.auth_home"))
 
 
 @auth_bp.route("/admin/login", methods=["GET", "POST"])
@@ -132,7 +139,9 @@ def render_auth_form(form_type):
             if not verify_user_password(user, form_data["password"]):
                 error = "Kullanıcı adı veya şifre hatalı."
             else:
+                language = session.get("language", DEFAULT_LANGUAGE)
                 session.clear()
+                session["language"] = language
                 session["user_id"] = user["id"]
                 session["username"] = user["username"]
                 session["full_name"] = user["full_name"]
@@ -218,6 +227,8 @@ def create_pilot_cancellation_request(flight_id):
 
 @auth_bp.route("/logout")
 def logout():
+    language = session.get("language", DEFAULT_LANGUAGE)
     session.clear()
+    session["language"] = language
     flash("Oturum kapatıldı.", "success")
     return redirect(url_for("auth.auth_home"))

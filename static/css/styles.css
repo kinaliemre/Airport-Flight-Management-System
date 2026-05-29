@@ -386,6 +386,32 @@ h1 {
   transform: translateY(-2px);
 }
 
+.language-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.language-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fbfcfe;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 12px;
+  text-decoration: none;
+}
+
+.language-button:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
 .back-link {
   display: inline-block;
   margin-top: 18px;
