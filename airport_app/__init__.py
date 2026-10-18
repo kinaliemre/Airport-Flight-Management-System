@@ -1,4 +1,5 @@
 import os
+import secrets
 
 from flask import Flask, session
 from flask import render_template
@@ -11,7 +12,9 @@ from .i18n import DEFAULT_LANGUAGE, normalize_language, translate_html
 
 def create_app():
     app = Flask(__name__, template_folder="../templates", static_folder="../static")
-    app.config["SECRET_KEY"] = "dev-secret-key-change-later"
+    # Set SECRET_KEY in the environment; without it a random key is used,
+    # so sessions only last until the app restarts.
+    app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
     app.config["DATABASE"] = os.environ.get(
         "AIRPORT_DATABASE", os.path.join(app.instance_path, "airport.sqlite")
     )
